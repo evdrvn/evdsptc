@@ -169,14 +169,12 @@ DONE:
 evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join){
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
     void* arg = NULL;
-    evdsptc_event_t* event = NULL;
     
     pthread_mutex_lock(&context->mtx);
     if(context->state == EVDSPTC_STATUS_RUNNING){
         pthread_cond_signal(&context->cv);
         context->state = EVDSPTC_STATUS_DESTROYING;
     }
-    event = (evdsptc_event_t*)context->list.root.next;
     pthread_mutex_unlock(&context->mtx);
     
     if(join) pthread_join(context->th, &arg);

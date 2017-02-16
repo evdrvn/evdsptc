@@ -88,7 +88,6 @@ static evdsptc_error_t post (evdsptc_context_t* context, evdsptc_event_t* event)
 
 TEST(evdsptc_test_group, post_test){
     evdsptc_context_t ctx;
-    evdsptc_error_t ret;
     sem_t* sem[3];
     evdsptc_event_t* event[3];
     int i = 0;
@@ -104,7 +103,7 @@ TEST(evdsptc_test_group, post_test){
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
 
-    ret = evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
+    evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
     post(&ctx, event[0]);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     
@@ -136,7 +135,7 @@ TEST(evdsptc_test_group, post_test){
     CHECK(ctx.list.root.prev == NULL);
     CHECK(ctx.list.root.next == NULL);
 
-    ret = evdsptc_destory(&ctx, true); 
+    evdsptc_destory(&ctx, true); 
 
     free(sem[0]);
     free(sem[1]);
@@ -148,7 +147,6 @@ TEST(evdsptc_test_group, post_test){
 
 TEST(evdsptc_test_group, destroy_test){
     evdsptc_context_t ctx;
-    evdsptc_error_t ret;
     sem_t* sem[3];
     evdsptc_event_t* event[3];
     int i = 0;
@@ -166,14 +164,14 @@ TEST(evdsptc_test_group, destroy_test){
 
     mock().expectOneCall("sem_event_done").onObject(event[0]);
 
-    ret = evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
+    evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
     post(&ctx, event[0]);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
     post(&ctx, event[1]);
     post(&ctx, event[2]);
 
-    ret = evdsptc_destory(&ctx, false);
+    evdsptc_destory(&ctx, false);
 
     sem_post(sem[0]);
 

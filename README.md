@@ -1,7 +1,7 @@
 evdsptc
 =======
 
-sync / async event dispatcher for C/C++
+sync/async event dispatcher for C/C++
 
 ## Getting Started
 
@@ -9,16 +9,16 @@ sync / async event dispatcher for C/C++
 * cmake ..
 * make
 
-## Example
+## Examples
 
 * async event
-See sync_event_example, test/src/evdsptc_test.cpp 
+    * See sync_event_example, test/src/evdsptc_test.cpp 
 
 * sync event
-See sync_event_example, test/src/evdsptc_test.cpp 
+    * See sync_event_example, test/src/evdsptc_test.cpp 
 
 * and more
-See test/src/evdsptc_test.cpp
+    * See test/src/evdsptc_test.cpp
 
 ## Run Tests
 

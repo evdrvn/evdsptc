@@ -12,7 +12,7 @@ sync/async event dispatcher for C/C++
 ## Examples
 
 * async event
-    * See sync_event_example, test/src/evdsptc_test.cpp 
+    * See async_event_example, test/src/evdsptc_test.cpp 
 
 * sync event
     * See sync_event_example, test/src/evdsptc_test.cpp 

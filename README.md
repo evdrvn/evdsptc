@@ -1,2 +1,2 @@
 # evdsptc
-sync /async event dispatcher
+sync/async event dispatcher

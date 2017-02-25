@@ -20,8 +20,10 @@ sync/async event dispatcher for C/C++
 * and more
     * See test/src/evdsptc_test.cpp
 
-## Run Tests
+## Running Tests
 
+* git submodule update
+* git submodule init
 * cd test
 * sh ./build_cpputest.sh
 * make

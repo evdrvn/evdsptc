@@ -5,3 +5,5 @@
 *.gcno
 tags
 core.*
+*.un~
+*.swp

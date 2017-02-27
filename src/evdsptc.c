@@ -244,3 +244,11 @@ void* evdsptc_event_getparam(evdsptc_event_t* event){
 void evdsptc_event_free (evdsptc_listelem_t* event){
     free(event);
 }
+
+pthread_t* evdsptc_getthread(evdsptc_context_t* context){
+    return &context->th;
+}
+
+pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context){
+    return &context->mtx;
+}

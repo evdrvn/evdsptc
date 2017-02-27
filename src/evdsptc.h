@@ -97,6 +97,8 @@ extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_listelem_destructor_t event_destructor);
 extern void* evdsptc_event_getparam(evdsptc_event_t* event);
 extern void evdsptc_event_free (evdsptc_listelem_t* event);
+extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
+extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 
 #ifdef __cplusplus
 }

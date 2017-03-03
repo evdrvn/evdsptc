@@ -32,7 +32,7 @@ typedef struct evdsptc_list evdsptc_list_t;
 typedef struct evdsptc_listelem evdsptc_listelem_t;
 typedef struct evdsptc_event evdsptc_event_t;
 typedef struct evdsptc_context evdsptc_context_t;
-typedef bool (*evdsptc_handler_t)(void* params);
+typedef bool (*evdsptc_handler_t)(evdsptc_event_t* event);
 typedef void (*evdsptc_event_callback_t)(evdsptc_event_t* event);
 typedef void (*evdsptc_listelem_destructor_t)(evdsptc_listelem_t* listelem);
 
@@ -99,6 +99,7 @@ extern void* evdsptc_event_getparam(evdsptc_event_t* event);
 extern void evdsptc_event_free (evdsptc_listelem_t* event);
 extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
+extern void evdsptc_event_done (evdsptc_event_t* event);
 
 #ifdef __cplusplus
 }

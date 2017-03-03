@@ -122,13 +122,13 @@ static void* evdsptch_thread_routine(void* arg){
         if(finalize == true) break;
         
         if(context->started_callback != NULL) context->started_callback(event);
-        if(event->handler != NULL) event->is_done = event->handler(event->param);
+        if(event->handler != NULL) event->is_done = event->handler(event);
         else event->is_done = true;
         __sync_synchronize(); 
         if(context->done_callback != NULL) context->done_callback(event);
         if(event->block_to_done == true && event->is_done == true) sem_post(&event->sem);
-        if(event->auto_destruct_in_done && event->listelem.destructor != NULL) 
-            event->listelem.destructor((evdsptc_listelem_t*)event);
+        if(event->auto_destruct_in_done && event->event_destructor != NULL && event->is_done == true) 
+            event->event_destructor((evdsptc_listelem_t*)event);
     }
     return NULL;
 }
@@ -252,3 +252,12 @@ pthread_t* evdsptc_getthread(evdsptc_context_t* context){
 pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context){
     return &context->mtx;
 }
+
+void evdsptc_event_done (evdsptc_event_t* event){
+        event->is_done = true;
+        __sync_synchronize();
+        if(event->block_to_done) sem_post(&event->sem);
+        if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+}
+
+

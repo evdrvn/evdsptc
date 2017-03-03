@@ -39,9 +39,9 @@ TEST_GROUP(evdsptc_list_test_group){
 };
 
 
-static bool handle_sem_event(void * param){
-    sem_t* sem = (sem_t*)param;
-    mock().actualCall("handle_sem_event").onObject(param);
+static bool handle_sem_event(evdsptc_event_t *event){
+    sem_t* sem = (sem_t*)evdsptc_event_getparam(event);
+    mock().actualCall("handle_sem_event").onObject(event);
     sem_event_handled_count++;
     while (sem_wait(sem) == -1 && errno == EINTR) continue;  
     return true;
@@ -98,7 +98,7 @@ TEST(evdsptc_test_group, post_test){
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[0]);
+    mock().expectOneCall("handle_sem_event").onObject(event[0]);
     
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
@@ -115,11 +115,11 @@ TEST(evdsptc_test_group, post_test){
     mock().expectOneCall("sem_event_done").onObject(event[0]);
 
     mock().expectOneCall("sem_event_started").onObject(event[1]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[1]);
+    mock().expectOneCall("handle_sem_event").onObject(event[1]);
     mock().expectOneCall("sem_event_done").onObject(event[1]);
 
     mock().expectOneCall("sem_event_started").onObject(event[2]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[2]);
+    mock().expectOneCall("handle_sem_event").onObject(event[2]);
     mock().expectOneCall("sem_event_done").onObject(event[2]);
     
     sem_post(sem[0]);
@@ -157,7 +157,7 @@ TEST(evdsptc_test_group, destroy_test){
 
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[0]);
+    mock().expectOneCall("handle_sem_event").onObject(event[0]);
 
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
@@ -223,7 +223,7 @@ TEST(evdsptc_test_group, block_to_done_test){
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[0]);
+    mock().expectOneCall("handle_sem_event").onObject(event[0]);
     
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
@@ -244,7 +244,7 @@ TEST(evdsptc_test_group, block_to_done_test){
     mock().checkExpectations();
     mock().expectOneCall("sem_event_done").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[1]);
-    mock().expectOneCall("handle_sem_event").onObject(sem[1]);
+    mock().expectOneCall("handle_sem_event").onObject(event[1]);
 
     sem_post(sem[0]);
     

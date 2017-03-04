@@ -6,7 +6,7 @@ sync/async event dispatcher for C/C++
 ## Getting Started
 
 * Building from source
-    ```sh
+    ```shell
     cd build
     cmake ..
     make
@@ -80,12 +80,13 @@ sync/async event dispatcher for C/C++
 
 ## Running Tests
 * Building Cpputest
-    ```sh
+    ```shell
     git submodule init
     git submodule update
     cd test
     sh ./build_cpputest.sh
     ```
+
 * Run
     ```sh
     make

@@ -6,6 +6,7 @@ sync/async event dispatcher for C/C++
 ## Getting Started
 
 * Building from source
+
     ```shell
     cd build
     cmake ..

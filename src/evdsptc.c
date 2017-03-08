@@ -197,7 +197,7 @@ evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event
         event->context = context;
         evdsptc_list_push(&context->list, &event->listelem);
         if(context->queued_callback != NULL) context->queued_callback(event);
-    } else ret = EVDSPTC_ERROR_INVALID_STATE;
+    } else ret = EVDSPTC_ERROR_INVALID;
     pthread_mutex_unlock(&context->mtx);
 
     return ret;
@@ -206,13 +206,30 @@ evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event
 evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event) 
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
-
+    errno = 0;
     while(-1 == sem_wait(&event->sem) && errno == EINTR) continue;
     __sync_synchronize();
-    if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
+    
+    if(errno == EINVAL) ret = EVDSPTC_ERROR_INVALID; 
+    else if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
 
     return ret;
 }
+
+evdsptc_error_t evdsptc_event_trywaitdone (evdsptc_event_t* event) 
+{
+    evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
+    errno = 0;
+    while(-1 == sem_trywait(&event->sem) && errno == EINTR) continue;
+    __sync_synchronize();
+    
+    if(errno == EINVAL) ret = EVDSPTC_ERROR_INVALID; 
+    else if(errno == EAGAIN) ret = EVDSPTC_ERROR_NOT_DONE; 
+    else if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
+
+    return ret;
+}
+
 
 
 static void evdsptc_event_abort (evdsptc_listelem_t* listelem){

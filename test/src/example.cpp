@@ -143,6 +143,8 @@ TEST(example_group, async_event_done_example){
 
     evdsptc_destory(&ctx_recv, true); 
     evdsptc_destory(&ctx_send, true); 
+    
+    evdsptc_event_destroy(suspended.ev); 
 }
 
 

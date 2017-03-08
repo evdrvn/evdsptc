@@ -100,6 +100,7 @@ extern void evdsptc_event_free (evdsptc_listelem_t* event);
 extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 extern void evdsptc_event_done (evdsptc_event_t* event);
+extern void evdsptc_event_destroy (evdsptc_event_t* event);
 
 #ifdef __cplusplus
 }

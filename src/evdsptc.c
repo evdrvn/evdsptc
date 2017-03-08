@@ -110,6 +110,7 @@ static void* evdsptch_thread_routine(void* arg){
     evdsptc_context_t* context = (evdsptc_context_t*)arg;
     evdsptc_event_t* event;
     bool finalize = false;
+    bool auto_destruct_in_done = false;
     while(1){
         pthread_mutex_lock(&context->mtx);
         while(context->state == EVDSPTC_STATUS_RUNNING && evdsptc_list_is_empty(&context->list) == true){
@@ -126,8 +127,9 @@ static void* evdsptch_thread_routine(void* arg){
         else event->is_done = true;
         __sync_synchronize(); 
         if(context->done_callback != NULL) context->done_callback(event);
-        if(event->block_to_done == true && event->is_done == true) sem_post(&event->sem);
-        if(event->auto_destruct_in_done && event->event_destructor != NULL && event->is_done == true) 
+        auto_destruct_in_done = event->auto_destruct_in_done;
+        if(event->is_done == true) sem_post(&event->sem);
+        if(auto_destruct_in_done && event->event_destructor != NULL && event->is_done == true) 
             event->event_destructor((evdsptc_listelem_t*)event);
     }
     return NULL;
@@ -211,7 +213,7 @@ static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
         evdsptc_event_t* event = (evdsptc_event_t*)listelem;
         event->is_canceled = true;
         __sync_synchronize();
-        if(event->block_to_done) sem_post(&event->sem);
+        sem_post(&event->sem);
         if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
 }
 
@@ -229,7 +231,7 @@ evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
     event->block_to_done = block_to_done;
     event->is_done = false;
     event->is_canceled = false;
-    if(block_to_done == true) sem_init(&event->sem, 0, 0);
+    sem_init(&event->sem, 0, 0);
     event->listelem.destructor = evdsptc_event_abort;
     event->event_destructor = event_destructor;
     event->auto_destruct_in_done = auto_destruct_in_done;
@@ -254,10 +256,14 @@ pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context){
 }
 
 void evdsptc_event_done (evdsptc_event_t* event){
-        event->is_done = true;
-        __sync_synchronize();
-        if(event->block_to_done) sem_post(&event->sem);
-        if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+    event->is_done = true;
+    __sync_synchronize();
+    sem_post(&event->sem);
 }
+
+void evdsptc_event_destroy (evdsptc_event_t* event){
+    if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+}
+
 
 

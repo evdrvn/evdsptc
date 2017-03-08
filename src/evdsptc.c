@@ -110,7 +110,7 @@ static void* evdsptch_thread_routine(void* arg){
     evdsptc_context_t* context = (evdsptc_context_t*)arg;
     evdsptc_event_t* event;
     bool finalize = false;
-    bool auto_destruct_in_done = false;
+    bool auto_destruct = false;
     while(1){
         pthread_mutex_lock(&context->mtx);
         while(context->state == EVDSPTC_STATUS_RUNNING && evdsptc_list_is_empty(&context->list) == true){
@@ -127,9 +127,9 @@ static void* evdsptch_thread_routine(void* arg){
         else event->is_done = true;
         __sync_synchronize(); 
         if(context->done_callback != NULL) context->done_callback(event);
-        auto_destruct_in_done = event->auto_destruct_in_done;
+        auto_destruct = event->auto_destruct;
         if(event->is_done == true) sem_post(&event->sem);
-        if(auto_destruct_in_done && event->event_destructor != NULL && event->is_done == true) 
+        if(auto_destruct && event->event_destructor != NULL && event->is_done == true) 
             event->event_destructor((evdsptc_listelem_t*)event);
     }
     return NULL;
@@ -200,14 +200,20 @@ evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event
     } else ret = EVDSPTC_ERROR_INVALID_STATE;
     pthread_mutex_unlock(&context->mtx);
 
-    if(event->block_to_done == true){
-        while(-1 == sem_wait(&event->sem) && errno == EINTR) continue;
-        __sync_synchronize();
-        if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
-    }        
+    return ret;
+}
+
+evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event) 
+{
+    evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
+
+    while(-1 == sem_wait(&event->sem) && errno == EINTR) continue;
+    __sync_synchronize();
+    if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
 
     return ret;
 }
+
 
 static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
         evdsptc_event_t* event = (evdsptc_event_t*)listelem;
@@ -220,21 +226,18 @@ static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
 evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event, 
         evdsptc_handler_t event_handler,
         void* event_param,
-        bool block_to_done,
-        bool auto_destruct_in_done,
+        bool auto_destruct,
         evdsptc_listelem_destructor_t event_destructor)
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
 
     event->handler = event_handler;
     event->param = event_param;
-    event->block_to_done = block_to_done;
-    event->is_done = false;
     event->is_canceled = false;
     sem_init(&event->sem, 0, 0);
     event->listelem.destructor = evdsptc_event_abort;
     event->event_destructor = event_destructor;
-    event->auto_destruct_in_done = auto_destruct_in_done;
+    event->auto_destruct = auto_destruct;
 
     return ret;
 }

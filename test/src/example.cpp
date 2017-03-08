@@ -37,7 +37,7 @@ TEST(example_group, async_event_example){
 
     for(i = 0; i <= 10; i++){
         ev = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
-        evdsptc_event_init(ev, add_int, (void*)i, false, true, evdsptc_event_free);
+        evdsptc_event_init(ev, add_int, (void*)i, true, evdsptc_event_free);
         evdsptc_post(&ctx, ev);
         sum_expected += i;
     }
@@ -60,11 +60,11 @@ TEST(example_group, sync_event_example){
     evdsptc_create(&ctx, NULL, NULL, NULL);
 
     for(i = 0; i <= 10; i++){
-        evdsptc_event_init(&ev[i], add_int, (void*)i, true, false, NULL);
+        evdsptc_event_init(&ev[i], add_int, (void*)i, false, NULL);
         evdsptc_post(&ctx, &ev[i]);
         sum_expected += i;
     }
-
+    evdsptc_event_waitdone(&ev[10]);
     CHECK_EQUAL(sum_expected, sum);
 
     evdsptc_destory(&ctx, true); 
@@ -85,9 +85,9 @@ static bool post_and_wait_to_done(evdsptc_event_t* event){
     struct send_target *target;
 
     target = (struct send_target*)evdsptc_event_getparam(event);
-    evdsptc_event_init(target->ev, target->handler, (void*)(count + 1), true, true, evdsptc_event_free);
+    evdsptc_event_init(target->ev, target->handler, (void*)(count + 1), true, evdsptc_event_free);
     evdsptc_post(target->ctx, target->ev);
-
+    evdsptc_event_waitdone(target->ev);
     count++;
 
     return true;
@@ -118,10 +118,10 @@ TEST(example_group, async_event_done_example){
     suspended.handler =  add_int_and_suspend;
     suspended.ev = ev_child[1];    
     
-    evdsptc_event_init(&ev_parent[0], post_and_wait_to_done, (void*)&no_suspended, false, false, NULL);
+    evdsptc_event_init(&ev_parent[0], post_and_wait_to_done, (void*)&no_suspended, false, NULL);
     evdsptc_post(&ctx_send, &ev_parent[0]);
 
-    evdsptc_event_init(&ev_parent[1], post_and_wait_to_done, (void*)&suspended, false, false, NULL);
+    evdsptc_event_init(&ev_parent[1], post_and_wait_to_done, (void*)&suspended, false, NULL);
     evdsptc_post(&ctx_send, &ev_parent[1]);
 
     //wait to have be handled async event

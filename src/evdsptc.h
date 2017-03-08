@@ -52,11 +52,10 @@ struct evdsptc_event {
     evdsptc_context_t* context;
     evdsptc_handler_t handler;
     void* param;
-    bool block_to_done;
     bool is_done;
     bool is_canceled;
     sem_t sem;
-    bool auto_destruct_in_done;
+    bool auto_destruct;
     evdsptc_listelem_destructor_t event_destructor;
 };
 
@@ -89,11 +88,11 @@ extern evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
         );
 extern evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
 extern evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
+extern evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_handler_t event_handler,
         void* event_param,
-        bool block_to_done,
-        bool auto_destruct_in_done,
+        bool auto_destruct,
         evdsptc_listelem_destructor_t event_destructor);
 extern void* evdsptc_event_getparam(evdsptc_event_t* event);
 extern void evdsptc_event_free (evdsptc_listelem_t* event);

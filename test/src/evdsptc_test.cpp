@@ -62,27 +62,28 @@ static void sem_event_done(evdsptc_event_t* event){
     sem_event_done_count++;
 }
 
-static evdsptc_error_t init_sem_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, sem_t** sem, bool block_to_done, bool free){
+static evdsptc_error_t init_sem_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, sem_t** sem, bool free){
     evdsptc_error_t ret;
     evdsptc_listelem_destructor_t destructor = NULL;
-    bool auto_destruct_in_done = false;
+    bool auto_destruct = false;
 
     *sem = (sem_t*)malloc(sizeof(sem_t));
     *event = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
     sem_init(*sem,0,0);
     if(free){
         destructor = evdsptc_event_free; 
-        auto_destruct_in_done = true;
+        auto_destruct = true;
     }
-    ret = evdsptc_event_init(*event, event_handler, (void*)*sem, block_to_done, auto_destruct_in_done, destructor);
+    ret = evdsptc_event_init(*event, event_handler, (void*)*sem, auto_destruct, destructor);
     return ret;
 }
 
-static evdsptc_error_t post (evdsptc_context_t* context, evdsptc_event_t* event){
+static evdsptc_error_t post (evdsptc_context_t* context, evdsptc_event_t* event, bool block_to_done){
     evdsptc_error_t ret;
-    if(event->block_to_done) blocking++;
+    if(block_to_done)blocking++;
     ret = evdsptc_post(context, event);
-    if(event->block_to_done) blocking--;
+    if(block_to_done) ret = evdsptc_event_waitdone(event);
+    if(block_to_done)blocking--;
     return ret;
 }
 
@@ -92,9 +93,9 @@ TEST(evdsptc_test_group, post_test){
     evdsptc_event_t* event[3];
     int i = 0;
 
-    init_sem_event(&event[0], handle_sem_event, &sem[0], false, false);
-    init_sem_event(&event[1], handle_sem_event, &sem[1], false, false);
-    init_sem_event(&event[2], handle_sem_event, &sem[2], false, false);
+    init_sem_event(&event[0], handle_sem_event, &sem[0], false);
+    init_sem_event(&event[1], handle_sem_event, &sem[1], false);
+    init_sem_event(&event[2], handle_sem_event, &sem[2], false);
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);
@@ -104,11 +105,11 @@ TEST(evdsptc_test_group, post_test){
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
 
     evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
-    post(&ctx, event[0]);
+    post(&ctx, event[0], false);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     
-    post(&ctx, event[1]);
-    post(&ctx, event[2]);
+    post(&ctx, event[1], false);
+    post(&ctx, event[2], false);
     
     mock().checkExpectations();
     
@@ -151,9 +152,9 @@ TEST(evdsptc_test_group, destroy_test){
     evdsptc_event_t* event[3];
     int i = 0;
 
-    init_sem_event(&event[0], handle_sem_event, &sem[0], false, false);
-    init_sem_event(&event[1], handle_sem_event, &sem[1], false, true);
-    init_sem_event(&event[2], handle_sem_event, &sem[2], false, true);
+    init_sem_event(&event[0], handle_sem_event, &sem[0], false);
+    init_sem_event(&event[1], handle_sem_event, &sem[1], true);
+    init_sem_event(&event[2], handle_sem_event, &sem[2], true);
 
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);
@@ -165,11 +166,11 @@ TEST(evdsptc_test_group, destroy_test){
     mock().expectOneCall("sem_event_done").onObject(event[0]);
 
     evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
-    post(&ctx, event[0]);
+    post(&ctx, event[0], false);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
-    post(&ctx, event[1]);
-    post(&ctx, event[2]);
+    post(&ctx, event[1], false);
+    post(&ctx, event[2], false);
 
     evdsptc_destory(&ctx, false);
 
@@ -190,11 +191,12 @@ TEST(evdsptc_test_group, destroy_test){
 struct async_post_param {
     evdsptc_context_t* context;
     evdsptc_event_t* event;
+    bool block_to_done;
 };
 
 static void* async_post_routine (void* _param){
     struct async_post_param *param = (struct async_post_param*)_param;
-    return (void*)post(param->context, param->event);
+    return (void*)post(param->context, param->event, param->block_to_done);
 }
 
 static void async_post (pthread_t *th, struct async_post_param* param){
@@ -210,16 +212,19 @@ TEST(evdsptc_test_group, block_to_done_test){
     struct async_post_param param[3];
     pthread_t th[3];
     
-    init_sem_event(&event[0], handle_sem_event, &sem[0], false, false);
-    init_sem_event(&event[1], handle_sem_event, &sem[1], true , false);
-    init_sem_event(&event[2], handle_sem_event, &sem[2], true , false);
+    init_sem_event(&event[0], handle_sem_event, &sem[0], false);
+    init_sem_event(&event[1], handle_sem_event, &sem[1], false);
+    init_sem_event(&event[2], handle_sem_event, &sem[2], false);
 
     param[0].context = &ctx;
     param[0].event = event[0];
+    param[0].block_to_done = false;
     param[1].context = &ctx;
     param[1].event = event[1];
+    param[1].block_to_done = true;
     param[2].context = &ctx;
     param[2].event = event[2];
+    param[2].block_to_done = true;
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
     mock().expectOneCall("sem_event_started").onObject(event[0]);

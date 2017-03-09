@@ -5,7 +5,7 @@ sync/async event dispatcher for C/C++
 
 ## Getting Started
 
-* Building from source
+* Building libevdsptc from source
 
     ```shell
     cd build
@@ -13,68 +13,121 @@ sync/async event dispatcher for C/C++
     make
     ```
 
+* Compile minimum program
+
+    ```c
+    #include "evdsptc.h"
+    
+    static bool hello(evdsptc_event_t* event){
+        printf("hello %s\n", (char*)evdsptc_event_getparam(event));
+        return true;
+    }
+    
+    int main(int ac, char** av){
+        evdsptc_context_t ctx;
+        evdsptc_event_t ev;
+    
+        char param[10] = "world";
+    
+        evdsptc_create(&ctx, NULL, NULL, NULL);
+    
+        evdsptc_event_init(&ev, hello, (void*)param, false, NULL);
+        evdsptc_post(&ctx, &ev);
+        evdsptc_event_waitdone(&ev);
+    
+        evdsptc_destory(&ctx, true);
+    
+        return 0;
+    }
+    
+    ```
+
+* Link libevdsptc and libpthread
+* Run
+
+## APIs
+
+```c
+evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
+    evdsptc_event_callback_t queued_callback,
+    evdsptc_event_callback_t started_callback,
+    evdsptc_event_callback_t done_callback);
+```
+```c
+void evdsptc_event_destroy (evdsptc_event_t* event);
+```
+```c
+evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
+    evdsptc_handler_t event_handler,
+    void* event_param,
+    bool auto_destruct,
+    evdsptc_listelem_destructor_t event_destructor);
+```
+```c
+evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
+```
+```c
+evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
+```
+```c
+void* evdsptc_event_getparam(evdsptc_event_t* event);
+```
+```c
+void evdsptc_event_free (evdsptc_listelem_t* event);
+```
+```c
+pthread_t* evdsptc_getthread(evdsptc_context_t* context);
+```
+```c
+pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
+```
+```c
+void evdsptc_event_done (evdsptc_event_t* event);
+```
+```c
+evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
+```
+```c
+void evdsptc_list_init(evdsptc_list_t* list);
+```
+```c
+bool evdsptc_list_is_empty(evdsptc_list_t* list);
+```
+```c
+evdsptc_listelem_t* evdsptc_list_iterator(evdsptc_list_t* list);
+```
+```c
+evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
+```
+```c
+evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem);
+```
+```c
+bool evdsptc_listelem_hasnext(evdsptc_listelem_t* listelem);
+```
+```c
+evdsptc_listelem_t* evdsptc_listelem_insertnext(evdsptc_listelem_t* listelem, evdsptc_listelem_t* next);
+```
+```c
+evdsptc_listelem_t* evdsptc_list_push(evdsptc_list_t* list, evdsptc_listelem_t* listelem);
+```
+```c
+evdsptc_listelem_t* evdsptc_listelem_remove(evdsptc_listelem_t* listelem);
+```
+```c
+evdsptc_listelem_t* evdsptc_list_pop(evdsptc_list_t* list);
+```
+```c
+void evdsptc_list_destroy(evdsptc_list_t* list);
+```
+
 ## Examples
 
 * async event
     * See async_event_example, test/src/example.cpp 
-        ```cpp
-        static volatile int sum = 0;
-        
-        static bool add_int(evdsptc_event_t* event){   
-            sum += (int)evdsptc_event_getparam(event); 
-            return true; // set true if done
-        }
-        
-        TEST(example_group, async_event_example){
-        
-            evdsptc_context_t ctx;
-            evdsptc_event_t* ev;
-            int i = 0;
-            int sum_expected = 0;
-        
-            evdsptc_create(&ctx, NULL, NULL, NULL);
-        
-            for(i = 0; i <= 10; i++){
-                ev = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
-                evdsptc_event_init(ev, add_int, (void*)i, false, true, evdsptc_event_free);
-                evdsptc_post(&ctx, ev);
-                sum_expected += i;
-            }
-        
-            //wait to have be handled async event
-            i = 0;
-            while(sum < sum_expected && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
-            CHECK_EQUAL(sum_expected, sum);
-        
-            evdsptc_destory(&ctx, true);
-        }
-        
-        ```
 
 * sync event
     * See sync_event_example, test/src/example.cpp 
-        ```cpp
-        TEST(example_group, sync_event_example){
-        
-            evdsptc_context_t ctx;
-            evdsptc_event_t ev[11];
-            int i = 0;
-            int sum_expected = 0;
-        
-            evdsptc_create(&ctx, NULL, NULL, NULL);
-        
-            for(i = 0; i <= 10; i++){
-                evdsptc_event_init(&ev[i], add_int, (void*)i, true, false, NULL);
-                evdsptc_post(&ctx, &ev[i]);
-                sum_expected += i;
-            }
-        
-            CHECK_EQUAL(sum_expected, sum);
-        
-            evdsptc_destory(&ctx, true);
-        }
-        
-        ```
 
 * and more
     * See test/src/evdsptc_test.cpp

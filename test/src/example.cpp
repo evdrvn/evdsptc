@@ -10,6 +10,11 @@
 static volatile int sum = 0;
 static volatile int count = 0;
 
+static bool hello(evdsptc_event_t* event){
+    printf("hello %s\n", (char*)evdsptc_event_getparam(event));
+    return true;
+}
+
 static bool add_int(evdsptc_event_t* event){
     sum += (int)evdsptc_event_getparam(event);
     return true; // set true if done
@@ -25,6 +30,21 @@ TEST_GROUP(example_group){
         mock().clear();
     }
 };
+
+TEST(example_group, hello_world_example){
+    evdsptc_context_t ctx;
+    evdsptc_event_t ev;
+
+    char param[10] = "world";
+
+    evdsptc_create(&ctx, NULL, NULL, NULL);
+
+    evdsptc_event_init(&ev, hello, (void*)param, false, NULL);
+    evdsptc_post(&ctx, &ev);
+    evdsptc_event_waitdone(&ev);
+
+    evdsptc_destory(&ctx, true);
+}
 
 TEST(example_group, async_event_example){
 

@@ -187,6 +187,14 @@ evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join){
     return ret;
 }
 
+static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
+        evdsptc_event_t* event = (evdsptc_event_t*)listelem;
+        event->is_canceled = true;
+        __sync_synchronize();
+        sem_post(&event->sem);
+        if(event->auto_destruct && event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+}
+
 evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event) 
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
@@ -199,6 +207,8 @@ evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event
         if(context->queued_callback != NULL) context->queued_callback(event);
     } else ret = EVDSPTC_ERROR_INVALID;
     pthread_mutex_unlock(&context->mtx);
+
+    if(ret != EVDSPTC_ERROR_NONE) evdsptc_event_abort((evdsptc_listelem_t*)event);
 
     return ret;
 }
@@ -228,16 +238,6 @@ evdsptc_error_t evdsptc_event_trywaitdone (evdsptc_event_t* event)
     else if(event->is_canceled == true) ret = EVDSPTC_ERROR_CANCELED;
 
     return ret;
-}
-
-
-
-static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
-        evdsptc_event_t* event = (evdsptc_event_t*)listelem;
-        event->is_canceled = true;
-        __sync_synchronize();
-        sem_post(&event->sem);
-        if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
 }
 
 evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event, 

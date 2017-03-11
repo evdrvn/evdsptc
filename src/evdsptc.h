@@ -76,6 +76,7 @@ extern void evdsptc_list_init(evdsptc_list_t* list);
 extern bool evdsptc_list_is_empty(evdsptc_list_t* list);
 extern evdsptc_listelem_t* evdsptc_list_iterator(evdsptc_list_t* list);
 extern evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
+extern void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
 extern evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem);
 extern bool evdsptc_listelem_hasnext(evdsptc_listelem_t* listelem);
 extern evdsptc_listelem_t* evdsptc_listelem_insertnext(evdsptc_listelem_t* listelem, evdsptc_listelem_t* next);

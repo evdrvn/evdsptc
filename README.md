@@ -47,14 +47,13 @@ sync/async event dispatcher for C/C++
 
 ## APIs
 
-
-```c
-evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
-    evdsptc_event_callback_t queued_callback,
-    evdsptc_event_callback_t begin_callback,
-    evdsptc_event_callback_t end_callback);
-```
-
+* evdsptc_create
+    ```c
+    evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
+        evdsptc_event_callback_t queued_callback,
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback);
+    ```
     * creates a event dispatcher. event dispatcher has a event dispatcher thread and an event queue.
     * queued_callback is function pointer called by event publisher thread when the event queued. if set NULL, call nothing.
     * begin_callback is function pointer called by event dispatcher thread when the event handler begin. if set NULL, call nothing.
@@ -65,90 +64,134 @@ evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
         * event handler
         * end_callback
 
+* evdsptc_event_destroy
+    ```c
+    evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
+    ```
+    * destroys the event dispater. events in the queue are canceled. 
 
-```c
-void evdsptc_event_destroy (evdsptc_event_t* event);
-```
+* evdsptc_event_init
+    ```c
+    evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
+        evdsptc_handler_t event_handler,
+        void* event_param,
+        bool auto_destruct,
+        evdsptc_event_destructor_t event_destructor);
+    ```
+    * event handler return value is TRUE means if the event is done. 
+    * initailizes the event object.
+    * event_param is User-defined event context.
+    * if auto_destruct is true, the event is destroyed automatically by its event_destructor called when event handler returns true (means the event is done) or the event canceled.
+    * event_destructor is function pointer that frees the event.  
 
-* destroys the event dispater. events in the queue are canceled. 
+* evdsptc_post
+    ```c
+    evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
+    ```
+    * posts the event.
 
+* event_waitdone
+    ```c
+    evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
+    ```
+    * blocking waits until the event is done.
+    * if the event canceled, returns EVDSPTC_ERROR_CANCELED.
 
-```c
-evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
-    evdsptc_handler_t event_handler,
-    void* event_param,
-    bool auto_destruct,
-    evdsptc_event_destructor_t event_destructor);
-```
+* evdsptc_event_getparam
+    ```c
+    void* evdsptc_event_getparam(evdsptc_event_t* event);
+    ```
+    * returns event_param.
 
-* initailizes the event object.
-* event_param is User-defined event context.
-* if auto_destruct is true, the event is destroyed automatically by its event_destructor called when event handler returns true (means the event is done) or the event canceled.
-* event_destructor is function pointer that frees the event.  
+* evdsptc_event_destroy
+    ```c
+    void evdsptc_event_destroy (evdsptc_event_t* event);
+    ```
+    * calls event_destructor.
 
-```c
-evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
-```
-* posts the event.
-```c
-evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
-```
-* blocking waits until the event is done.
-* if the event canceled, returns EVDSPTC_ERROR_CANCELED.
-```c
-void* evdsptc_event_getparam(evdsptc_event_t* event);
-```
-* returns event_param.
-```c
-void evdsptc_event_free (evdsptc_event_t* event);
-```
-* is typical event destructor.
-* frees the event, but not its event_param.
-```c
-pthread_t* evdsptc_getthread(evdsptc_context_t* context);
-```
-```c
-pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
-```
-```c
-void evdsptc_event_done (evdsptc_event_t* event);
-```
-```c
-evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
-```
-```c
-void evdsptc_list_init(evdsptc_list_t* list);
-```
-```c
-bool evdsptc_list_is_empty(evdsptc_list_t* list);
-```
-```c
-evdsptc_listelem_t* evdsptc_list_iterator(evdsptc_list_t* list);
-```
-```c
-evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
-```
-```c
-evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem);
-```
-```c
-bool evdsptc_listelem_hasnext(evdsptc_listelem_t* listelem);
-```
-```c
-evdsptc_listelem_t* evdsptc_listelem_insertnext(evdsptc_listelem_t* listelem, evdsptc_listelem_t* next);
-```
-```c
-evdsptc_listelem_t* evdsptc_list_push(evdsptc_list_t* list, evdsptc_listelem_t* listelem);
-```
-```c
-evdsptc_listelem_t* evdsptc_listelem_remove(evdsptc_listelem_t* listelem);
-```
-```c
-evdsptc_listelem_t* evdsptc_list_pop(evdsptc_list_t* list);
-```
-```c
-void evdsptc_list_destroy(evdsptc_list_t* list);
-```
+* evdsptc_event_free
+    ```c
+    void evdsptc_event_free (evdsptc_event_t* event);
+    ```
+    * is typical event destructor, frees the event, but not its event_param.
+
+* evdsptc_getthread
+    ```c
+    pthread_t* evdsptc_getthread(evdsptc_context_t* context);
+    ```
+    * returns event dispatcher thread.
+
+* evdsptc_getmutex
+    ```c
+    pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
+    ```
+    * returns event dispatcher mutex. 
+
+* evdsptc_event_done
+    ```c
+    void evdsptc_event_done (evdsptc_event_t* event);
+    ```
+    * marks the event done. if auto_destruct set, calls event_destructor.
+
+* evdsptc_list_init
+    ```c
+    void evdsptc_list_init(evdsptc_list_t* list);
+    ```
+
+* evdsptc_list_is_empty
+    ```c
+    bool evdsptc_list_is_empty(evdsptc_list_t* list);
+    ```
+
+* evdsptc_list_iterator
+    ```c
+    evdsptc_listelem_t* evdsptc_list_iterator(evdsptc_list_t* list);
+    ```
+
+* evdsptc_list_getlast
+    ```c
+    evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
+    ```
+
+* evdsptc_listelem_init
+    ```c
+    void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
+    ```
+
+* evdsptc_listelem_next
+    ```c
+    evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem);
+    ```
+
+* evdsptc_listelem_hasnext
+    ```c
+    bool evdsptc_listelem_hasnext(evdsptc_listelem_t* listelem);
+    ```
+
+* evdsptc_listelem_insertnext
+    ```c
+    evdsptc_listelem_t* evdsptc_listelem_insertnext(evdsptc_listelem_t* listelem, evdsptc_listelem_t* next);
+    ```
+
+* evdsptc_list_push
+    ```c
+    evdsptc_listelem_t* evdsptc_list_push(evdsptc_list_t* list, evdsptc_listelem_t* listelem);
+    ```
+
+* evdsptc_listelem_remove
+    ```c
+    evdsptc_listelem_t* evdsptc_listelem_remove(evdsptc_listelem_t* listelem);
+    ```
+
+* evdsptc_list_pop
+    ```c
+    evdsptc_listelem_t* evdsptc_list_pop(evdsptc_list_t* list);
+    ```
+
+* evdsptc_list_destroy
+    ```c
+    void evdsptc_list_destroy(evdsptc_list_t* list);
+    ```
 
 ## Examples
 
@@ -157,6 +200,9 @@ void evdsptc_list_destroy(evdsptc_list_t* list);
 
 * sync event
     * See sync_event_example, test/src/example.cpp 
+
+* list 
+    * See list_bubble_sort_example, test/src/example.cpp 
 
 * and more
     * See test/src/evdsptc_test.cpp

@@ -82,10 +82,10 @@ TEST(example_group, sync_event_example){
     for(i = 0; i <= 10; i++){
         evdsptc_event_init(&ev[i], add_int, (void*)i, false, NULL);
         evdsptc_post(&ctx, &ev[i]);
+        evdsptc_event_waitdone(&ev[i]);
         sum_expected += i;
+        CHECK_EQUAL(sum_expected, sum);
     }
-    evdsptc_event_waitdone(&ev[10]);
-    CHECK_EQUAL(sum_expected, sum);
 
     evdsptc_destory(&ctx, true); 
 }
@@ -167,4 +167,59 @@ TEST(example_group, async_event_done_example){
     evdsptc_event_destroy(suspended.ev); 
 }
 
+typedef struct {
+    evdsptc_listelem_t listelem;
+    int* pint;
+} int_listelem_t;
 
+static void int_listelem_destructor(evdsptc_listelem_t* listelem){
+    int_listelem_t* pint_listelem = (int_listelem_t*)listelem;
+    free(pint_listelem->pint);
+    free(pint_listelem);
+}
+
+TEST(example_group, list_bubble_sort_example){
+    int list_size = 10;
+    int i, j;
+    evdsptc_list_t list;
+    evdsptc_listelem_t* iterator;
+    evdsptc_listelem_t* next;
+    int_listelem_t* pint_listelem;
+
+    evdsptc_list_init(&list);
+
+    for(i = 0; i < list_size; i++){
+       pint_listelem = (int_listelem_t*)malloc(sizeof(int_listelem_t));
+       evdsptc_listelem_init(&pint_listelem->listelem, int_listelem_destructor);
+       pint_listelem->pint = (int*)malloc(sizeof(int));
+       *(pint_listelem->pint) = list_size - i;
+       evdsptc_list_push(&list, (evdsptc_listelem_t*)pint_listelem);
+    }
+
+    //bubble sort
+    for(i = 0; i < list_size - 1; i++){
+        iterator = evdsptc_list_iterator(&list);
+        for(j = 0; j < list_size - i - 1; j++){
+            iterator = evdsptc_listelem_next(iterator);
+            next     = evdsptc_listelem_next(iterator);
+            if(*(((int_listelem_t*)next    )->pint) <
+               *(((int_listelem_t*)iterator)->pint)){
+                evdsptc_listelem_insertnext(next, evdsptc_listelem_remove(iterator));
+                iterator = next;
+            }
+        }
+    }
+
+    //check
+    i = 1; 
+    iterator = evdsptc_list_iterator(&list);
+    while(evdsptc_listelem_hasnext(iterator)){
+        iterator = evdsptc_listelem_next(iterator);
+        pint_listelem = (int_listelem_t*)iterator;
+        j = *(pint_listelem->pint);
+        CHECK_EQUAL(i, j);
+        i++; 
+    }
+
+    evdsptc_list_destroy(&list);
+}

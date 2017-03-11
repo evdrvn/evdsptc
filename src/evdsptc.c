@@ -18,6 +18,10 @@ evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list){
     return list->root.prev;
 }
 
+void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor){
+    listelem->destructor = listelem_destructor;
+}
+
 evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem){
     return listelem->next;
 }

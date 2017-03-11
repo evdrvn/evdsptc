@@ -130,7 +130,7 @@ static void* evdsptch_thread_routine(void* arg){
         auto_destruct = event->auto_destruct;
         if(event->is_done == true) sem_post(&event->sem);
         if(auto_destruct && event->event_destructor != NULL && event->is_done == true) 
-            event->event_destructor((evdsptc_listelem_t*)event);
+            event->event_destructor(event);
     }
     return NULL;
 }
@@ -192,7 +192,7 @@ static void evdsptc_event_abort (evdsptc_listelem_t* listelem){
         event->is_canceled = true;
         __sync_synchronize();
         sem_post(&event->sem);
-        if(event->auto_destruct && event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+        if(event->auto_destruct && event->event_destructor != NULL) event->event_destructor(event);
 }
 
 evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event) 
@@ -244,7 +244,7 @@ evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_handler_t event_handler,
         void* event_param,
         bool auto_destruct,
-        evdsptc_listelem_destructor_t event_destructor)
+        evdsptc_event_destructor_t event_destructor)
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
 
@@ -263,7 +263,7 @@ void* evdsptc_event_getparam(evdsptc_event_t* event){
     return event->param; 
 }
 
-void evdsptc_event_free (evdsptc_listelem_t* event){
+void evdsptc_event_free (evdsptc_event_t* event){
     free(event);
 }
 
@@ -282,7 +282,7 @@ void evdsptc_event_done (evdsptc_event_t* event){
 }
 
 void evdsptc_event_destroy (evdsptc_event_t* event){
-    if(event->event_destructor != NULL) event->event_destructor((evdsptc_listelem_t*)event);
+    if(event->event_destructor != NULL) event->event_destructor(event);
 }
 
 

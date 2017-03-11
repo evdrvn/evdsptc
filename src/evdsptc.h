@@ -36,6 +36,7 @@ typedef struct evdsptc_context evdsptc_context_t;
 typedef bool (*evdsptc_handler_t)(evdsptc_event_t* event);
 typedef void (*evdsptc_event_callback_t)(evdsptc_event_t* event);
 typedef void (*evdsptc_listelem_destructor_t)(evdsptc_listelem_t* listelem);
+typedef void (*evdsptc_event_destructor_t)(evdsptc_event_t* event);
 
 struct evdsptc_listelem {
     evdsptc_listelem_t* root;
@@ -57,7 +58,7 @@ struct evdsptc_event {
     bool is_canceled;
     sem_t sem;
     bool auto_destruct;
-    evdsptc_listelem_destructor_t event_destructor;
+    evdsptc_event_destructor_t event_destructor;
 };
 
 struct evdsptc_context {
@@ -94,9 +95,9 @@ extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_handler_t event_handler,
         void* event_param,
         bool auto_destruct,
-        evdsptc_listelem_destructor_t event_destructor);
+        evdsptc_event_destructor_t event_destructor);
 extern void* evdsptc_event_getparam(evdsptc_event_t* event);
-extern void evdsptc_event_free (evdsptc_listelem_t* event);
+extern void evdsptc_event_free (evdsptc_event_t* event);
 extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 extern void evdsptc_event_done (evdsptc_event_t* event);

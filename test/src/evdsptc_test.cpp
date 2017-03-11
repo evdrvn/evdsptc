@@ -64,7 +64,7 @@ static void sem_event_end(evdsptc_event_t* event){
 
 static evdsptc_error_t init_sem_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, sem_t** sem, bool free){
     evdsptc_error_t ret;
-    evdsptc_listelem_destructor_t destructor = NULL;
+    evdsptc_event_destructor_t destructor = NULL;
     bool auto_destruct = false;
 
     *sem = (sem_t*)malloc(sizeof(sem_t));

@@ -67,8 +67,8 @@ struct evdsptc_context {
     pthread_cond_t cv;
     evdsptc_status_t state;
     evdsptc_event_callback_t queued_callback;
-    evdsptc_event_callback_t started_callback;
-    evdsptc_event_callback_t done_callback;
+    evdsptc_event_callback_t begin_callback;
+    evdsptc_event_callback_t end_callback;
 };
 
 extern void evdsptc_list_init(evdsptc_list_t* list);
@@ -84,8 +84,8 @@ extern evdsptc_listelem_t* evdsptc_list_pop(evdsptc_list_t* list);
 extern void evdsptc_list_destroy(evdsptc_list_t* list);
 extern evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
         evdsptc_event_callback_t queued_callback,
-        evdsptc_event_callback_t started_callback,
-        evdsptc_event_callback_t done_callback
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback
         );
 extern evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
 extern evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);

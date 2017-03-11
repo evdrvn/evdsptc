@@ -10,17 +10,17 @@
 #define NUM_OF_USLEEP (10)
 
 static volatile int sem_event_queued_count = 0;
-static volatile int sem_event_started_count = 0;
+static volatile int sem_event_begin_count = 0;
 static volatile int sem_event_handled_count = 0;
-static volatile int sem_event_done_count = 0;
+static volatile int sem_event_end_count = 0;
 static volatile int blocking = 0;
 
 TEST_GROUP(evdsptc_test_group){
     void setup(){
         sem_event_queued_count = 0;
-        sem_event_started_count = 0;
+        sem_event_begin_count = 0;
         sem_event_handled_count = 0;
-        sem_event_done_count = 0;
+        sem_event_end_count = 0;
         blocking = 0;
     }
     void teardown(){
@@ -52,14 +52,14 @@ static void sem_event_queued(evdsptc_event_t* event){
     sem_event_queued_count++;
 }
 
-static void sem_event_started(evdsptc_event_t* event){
-    mock().actualCall("sem_event_started").onObject(event);
-    sem_event_started_count++;
+static void sem_event_begin(evdsptc_event_t* event){
+    mock().actualCall("sem_event_begin").onObject(event);
+    sem_event_begin_count++;
 }
 
-static void sem_event_done(evdsptc_event_t* event){
-    mock().actualCall("sem_event_done").onObject(event);
-    sem_event_done_count++;
+static void sem_event_end(evdsptc_event_t* event){
+    mock().actualCall("sem_event_end").onObject(event);
+    sem_event_end_count++;
 }
 
 static evdsptc_error_t init_sem_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, sem_t** sem, bool free){
@@ -98,13 +98,13 @@ TEST(evdsptc_test_group, post_test){
     init_sem_event(&event[2], handle_sem_event, &sem[2], false);
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
-    mock().expectOneCall("sem_event_started").onObject(event[0]);
+    mock().expectOneCall("sem_event_begin").onObject(event[0]);
     mock().expectOneCall("handle_sem_event").onObject(event[0]);
     
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
 
-    evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
+    evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     post(&ctx, event[0], false);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     
@@ -113,24 +113,24 @@ TEST(evdsptc_test_group, post_test){
     
     mock().checkExpectations();
     
-    mock().expectOneCall("sem_event_done").onObject(event[0]);
+    mock().expectOneCall("sem_event_end").onObject(event[0]);
 
-    mock().expectOneCall("sem_event_started").onObject(event[1]);
+    mock().expectOneCall("sem_event_begin").onObject(event[1]);
     mock().expectOneCall("handle_sem_event").onObject(event[1]);
-    mock().expectOneCall("sem_event_done").onObject(event[1]);
+    mock().expectOneCall("sem_event_end").onObject(event[1]);
 
-    mock().expectOneCall("sem_event_started").onObject(event[2]);
+    mock().expectOneCall("sem_event_begin").onObject(event[2]);
     mock().expectOneCall("handle_sem_event").onObject(event[2]);
-    mock().expectOneCall("sem_event_done").onObject(event[2]);
+    mock().expectOneCall("sem_event_end").onObject(event[2]);
     
     sem_post(sem[0]);
 
-    while(sem_event_done_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
     sem_post(sem[1]);
     sem_post(sem[2]);
 
-    while(sem_event_done_count < 3 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    while(sem_event_end_count < 3 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
     mock().checkExpectations();
     CHECK(ctx.list.root.prev == NULL);
@@ -157,15 +157,15 @@ TEST(evdsptc_test_group, destroy_test){
     init_sem_event(&event[2], handle_sem_event, &sem[2], true);
 
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
-    mock().expectOneCall("sem_event_started").onObject(event[0]);
+    mock().expectOneCall("sem_event_begin").onObject(event[0]);
     mock().expectOneCall("handle_sem_event").onObject(event[0]);
 
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
 
-    mock().expectOneCall("sem_event_done").onObject(event[0]);
+    mock().expectOneCall("sem_event_end").onObject(event[0]);
 
-    evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
+    evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     post(&ctx, event[0], false);
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
@@ -176,7 +176,7 @@ TEST(evdsptc_test_group, destroy_test){
 
     sem_post(sem[0]);
 
-    while(sem_event_done_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
 
     mock().checkExpectations();
     CHECK(ctx.list.root.prev == NULL);
@@ -227,13 +227,13 @@ TEST(evdsptc_test_group, block_to_done_test){
     param[2].block_to_done = true;
     
     mock().expectOneCall("sem_event_queued").onObject(event[0]);
-    mock().expectOneCall("sem_event_started").onObject(event[0]);
+    mock().expectOneCall("sem_event_begin").onObject(event[0]);
     mock().expectOneCall("handle_sem_event").onObject(event[0]);
     
     mock().expectOneCall("sem_event_queued").onObject(event[1]);
     mock().expectOneCall("sem_event_queued").onObject(event[2]);
 
-    ret = evdsptc_create(&ctx, sem_event_queued, sem_event_started, sem_event_done);
+    ret = evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     async_post(&th[0], &param[0]);
     
     while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
@@ -247,14 +247,14 @@ TEST(evdsptc_test_group, block_to_done_test){
     CHECK_EQUAL(2, blocking);
 
     mock().checkExpectations();
-    mock().expectOneCall("sem_event_done").onObject(event[0]);
-    mock().expectOneCall("sem_event_started").onObject(event[1]);
+    mock().expectOneCall("sem_event_end").onObject(event[0]);
+    mock().expectOneCall("sem_event_begin").onObject(event[1]);
     mock().expectOneCall("handle_sem_event").onObject(event[1]);
 
     sem_post(sem[0]);
     
-    while(sem_event_done_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
-    while(sem_event_started_count < 2 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    while(sem_event_begin_count < 2 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(event[2], (evdsptc_event_t*)ctx.list.root.next);
     CHECK(NULL == ctx.list.root.next->next);
     
@@ -264,7 +264,7 @@ TEST(evdsptc_test_group, block_to_done_test){
     CHECK_EQUAL(true , event[2]->is_canceled);
     
     mock().checkExpectations();
-    mock().expectOneCall("sem_event_done").onObject(event[1]);
+    mock().expectOneCall("sem_event_end").onObject(event[1]);
 
     sem_post(sem[1]);
 

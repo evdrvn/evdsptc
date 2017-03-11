@@ -122,11 +122,11 @@ static void* evdsptch_thread_routine(void* arg){
         
         if(finalize == true) break;
         
-        if(context->started_callback != NULL) context->started_callback(event);
+        if(context->begin_callback != NULL) context->begin_callback(event);
         if(event->handler != NULL) event->is_done = event->handler(event);
         else event->is_done = true;
         __sync_synchronize(); 
-        if(context->done_callback != NULL) context->done_callback(event);
+        if(context->end_callback != NULL) context->end_callback(event);
         auto_destruct = event->auto_destruct;
         if(event->is_done == true) sem_post(&event->sem);
         if(auto_destruct && event->event_destructor != NULL && event->is_done == true) 
@@ -137,8 +137,8 @@ static void* evdsptch_thread_routine(void* arg){
 
 evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
         evdsptc_event_callback_t queued_callback,
-        evdsptc_event_callback_t started_callback,
-        evdsptc_event_callback_t done_callback)
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback)
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;
     
@@ -150,8 +150,8 @@ evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
     evdsptc_list_init(&context->list);
     context->state = EVDSPTC_STATUS_RUNNING;
     context->queued_callback = queued_callback;
-    context->started_callback = started_callback;
-    context->done_callback = done_callback; 
+    context->begin_callback = begin_callback;
+    context->end_callback = end_callback; 
 
     if(0 != pthread_create(&context->th, NULL, &evdsptch_thread_routine, (void*) context)){
         ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;

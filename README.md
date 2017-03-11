@@ -50,9 +50,13 @@ sync/async event dispatcher for C/C++
 ```c
 evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
     evdsptc_event_callback_t queued_callback,
-    evdsptc_event_callback_t started_callback,
-    evdsptc_event_callback_t done_callback);
+    evdsptc_event_callback_t begin_callback,
+    evdsptc_event_callback_t end_callback);
 ```
+    creates event dispatcher. dispatcher has a event dispatcher thread and an event queue.
+    queued_callback is function pointer called by event publisher thread when the event queued. if set NULL, call nothing.
+    begin_callback is function pointer called by event dispatcher thread when the event handler begin. if set NULL, call nothing.
+    end_callback is function pointer called by event dispatcher thread when the handler event end. if set NULL, call nothing.
 ```c
 void evdsptc_event_destroy (evdsptc_event_t* event);
 ```

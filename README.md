@@ -78,8 +78,8 @@ evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
     bool auto_destruct,
     evdsptc_event_destructor_t event_destructor);
 ```
-* event handler return value is TRUE means if the event is done. 
 * initailizes the event object.
+* event_handler return value is TRUE means if the event is done. 
 * event_param is User-defined event context.
 * if auto_destruct is true, the event is destroyed automatically by its event_destructor called when event handler returns true (means the event is done) or the event canceled.
 * event_destructor is function pointer that frees the event.  

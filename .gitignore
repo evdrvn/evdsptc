@@ -4,6 +4,7 @@
 *.gcda
 *.gcno
 tags
+core
 core.*
 *.un~
 *.swp

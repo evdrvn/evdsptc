@@ -18,7 +18,7 @@ evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list){
     return list->root.prev;
 }
 
-void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor){
+void evdsptc_listelem_setdestructor(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor){
     listelem->destructor = listelem_destructor;
 }
 
@@ -284,6 +284,12 @@ void evdsptc_event_done (evdsptc_event_t* event){
     __sync_synchronize();
     sem_post(&event->sem);
 }
+
+bool evdsptc_event_isdone (evdsptc_event_t* event){
+    __sync_synchronize();
+    return event->is_done;
+}
+
 
 void evdsptc_event_destroy (evdsptc_event_t* event){
     if(event->event_destructor != NULL) event->event_destructor(event);

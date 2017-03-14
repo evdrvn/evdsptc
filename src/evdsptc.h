@@ -76,7 +76,7 @@ extern void evdsptc_list_init(evdsptc_list_t* list);
 extern bool evdsptc_list_is_empty(evdsptc_list_t* list);
 extern evdsptc_listelem_t* evdsptc_list_iterator(evdsptc_list_t* list);
 extern evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
-extern void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
+extern void evdsptc_listelem_setdestructor(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
 extern evdsptc_listelem_t* evdsptc_listelem_next(evdsptc_listelem_t* listelem);
 extern bool evdsptc_listelem_hasnext(evdsptc_listelem_t* listelem);
 extern evdsptc_listelem_t* evdsptc_listelem_insertnext(evdsptc_listelem_t* listelem, evdsptc_listelem_t* next);
@@ -92,6 +92,7 @@ extern evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
 extern evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
 extern evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
+extern evdsptc_error_t evdsptc_event_trywaitdone (evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_handler_t event_handler,
         void* event_param,
@@ -102,6 +103,7 @@ extern void evdsptc_event_free (evdsptc_event_t* event);
 extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 extern void evdsptc_event_done (evdsptc_event_t* event);
+extern bool evdsptc_event_isdone (evdsptc_event_t* event);
 extern void evdsptc_event_destroy (evdsptc_event_t* event);
 
 #ifdef __cplusplus

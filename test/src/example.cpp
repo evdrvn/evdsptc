@@ -190,7 +190,7 @@ TEST(example_group, list_bubble_sort_example){
 
     for(i = 0; i < list_size; i++){
        pint_listelem = (int_listelem_t*)malloc(sizeof(int_listelem_t));
-       evdsptc_listelem_init(&pint_listelem->listelem, int_listelem_destructor);
+       evdsptc_listelem_setdestructor(&pint_listelem->listelem, int_listelem_destructor);
        pint_listelem->pint = (int*)malloc(sizeof(int));
        *(pint_listelem->pint) = list_size - i;
        evdsptc_list_push(&list, (evdsptc_listelem_t*)pint_listelem);

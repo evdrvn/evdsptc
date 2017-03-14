@@ -45,7 +45,7 @@ sync/async event dispatcher for C/C++
 * Link libevdsptc and libpthread
 * Run
 
-## APIs
+## API Reference
 
 * evdsptc_create
     ```c
@@ -97,6 +97,14 @@ sync/async event dispatcher for C/C++
     * blocking waits until the event is done.
     * if the event canceled, returns EVDSPTC_ERROR_CANCELED.
 
+* event_trywaitdone
+    ```c
+    evdsptc_error_t evdsptc_event_trywaitdone (evdsptc_event_t* event);
+    ```
+    * if the event is done, returns EVDSPTC_ERROR_NONE.
+    * if the event is not done, returns EVDSPTC_ERROR_NOT_DONE.
+    * if the event canceled, returns EVDSPTC_ERROR_CANCELED.
+
 * evdsptc_event_getparam
     ```c
     void* evdsptc_event_getparam(evdsptc_event_t* event);
@@ -131,7 +139,13 @@ sync/async event dispatcher for C/C++
     ```c
     void evdsptc_event_done (evdsptc_event_t* event);
     ```
-    * marks the event done. if auto_destruct set, calls event_destructor.
+    * marks the event done.
+
+* evdsptc_event_isdone
+    ```c
+    void evdsptc_event_isdone (evdsptc_event_t* event);
+    ```
+    * if the event is done, returns true.
 
 * evdsptc_list_init
     ```c
@@ -153,9 +167,9 @@ sync/async event dispatcher for C/C++
     evdsptc_listelem_t* evdsptc_list_getlast(evdsptc_list_t* list);
     ```
 
-* evdsptc_listelem_init
+* evdsptc_listelem_setdestructor
     ```c
-    void evdsptc_listelem_init(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
+    void evdsptc_listelem_setdestructor(evdsptc_listelem_t* listelem, evdsptc_listelem_destructor_t listelem_destructor);
     ```
 
 * evdsptc_listelem_next

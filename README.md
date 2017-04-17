@@ -76,13 +76,13 @@ evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
     evdsptc_handler_t event_handler,
     void* event_param,
     bool auto_destruct,
-    evdsptc_event_destructor_t event_destructor);
+    evdsptc_event_destructor_t destructor);
 ```
 * initailizes the event object.
 * event_handler return value is TRUE means if the event is done. 
 * event_param is User-defined event context.
-* if auto_destruct is true, the event is destroyed automatically by its event_destructor called when event handler returns true (means the event is done) or the event canceled.
-* event_destructor is function pointer that frees the event.  
+* if auto_destruct is true, the event is destroyed automatically by its destructor called when event handler returns true (means the event is done) or the event canceled.
+* destructor is function pointer that frees the event.  
 
 ### evdsptc_post
 ```c
@@ -115,7 +115,7 @@ void* evdsptc_event_getparam(evdsptc_event_t* event);
 ```c
 void evdsptc_event_destroy (evdsptc_event_t* event);
 ```
-* calls event_destructor.
+* calls destructor.
 
 ### evdsptc_event_free
 ```c
@@ -206,6 +206,12 @@ evdsptc_listelem_t* evdsptc_list_pop(evdsptc_list_t* list);
 ```c
 void evdsptc_list_destroy(evdsptc_list_t* list);
 ```
+
+### evdsptc_event_cancel
+```c
+void evdsptc_event_cancel (evdsptc_event_t* event);
+```
+
 
 ## Examples
 

@@ -212,6 +212,15 @@ void evdsptc_list_destroy(evdsptc_list_t* list);
 void evdsptc_event_cancel (evdsptc_event_t* event);
 ```
 
+### evdsptc_event_setdestructor
+```c
+void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destructor_t destructor);
+```
+
+### evdsptc_event_setautodestruct
+```c
+void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct);
+```
 
 ## Examples
 

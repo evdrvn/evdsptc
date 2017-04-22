@@ -110,7 +110,7 @@ void evdsptc_list_destroy(evdsptc_list_t* list){
     return;
 }
 
-static void* evdsptch_thread_routine(void* arg){
+static void* evdsptc_thread_routine(void* arg){
     evdsptc_context_t* context = (evdsptc_context_t*)arg;
     evdsptc_event_t* event;
     bool finalize = false;
@@ -157,7 +157,7 @@ evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
     context->begin_callback = begin_callback;
     context->end_callback = end_callback; 
 
-    if(0 != pthread_create(&context->th, NULL, &evdsptch_thread_routine, (void*) context)){
+    if(0 != pthread_create(&context->th, NULL, &evdsptc_thread_routine, (void*) context)){
         ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;
         goto ERROR;
     }
@@ -259,6 +259,7 @@ evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
     event->handler = event_handler;
     event->param = event_param;
     event->is_canceled = false;
+    event->is_done = false;
     sem_init(&event->sem, 0, 0);
     event->listelem.destructor = evdsptc_listelem_cancel;
     event->destructor = destructor;
@@ -275,8 +276,8 @@ void evdsptc_event_free (evdsptc_event_t* event){
     free(event);
 }
 
-pthread_t* evdsptc_getthread(evdsptc_context_t* context){
-    return &context->th;
+pthread_t evdsptc_getthread(evdsptc_context_t* context){
+    return context->th;
 }
 
 pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context){
@@ -297,6 +298,14 @@ bool evdsptc_event_isdone (evdsptc_event_t* event){
 
 void evdsptc_event_destroy (evdsptc_event_t* event){
     if(event->destructor != NULL) event->destructor(event);
+}
+
+void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destructor_t destructor){
+    event->destructor = destructor;
+}
+
+void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct){
+    event->auto_destruct = auto_destruct;
 }
 
 

@@ -100,12 +100,14 @@ extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_event_destructor_t event_destructor);
 extern void* evdsptc_event_getparam(evdsptc_event_t* event);
 extern void evdsptc_event_free (evdsptc_event_t* event);
-extern pthread_t* evdsptc_getthread(evdsptc_context_t* context);
+extern pthread_t evdsptc_getthread(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 extern void evdsptc_event_done (evdsptc_event_t* event);
 extern bool evdsptc_event_isdone (evdsptc_event_t* event);
 extern void evdsptc_event_destroy (evdsptc_event_t* event);
 extern void evdsptc_event_cancel (evdsptc_event_t* event);
+extern void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destructor_t destructor);
+extern void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct);
 
 #ifdef __cplusplus
 }

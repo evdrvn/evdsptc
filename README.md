@@ -1,16 +1,34 @@
 evdsptc
 =======
 
-sync/async event dispatcher for C/C++
+evdsptc is an event dispatching framework. Its main features and design principles are:
+
+* Selectable sync type
+    * sync event
+    * async event
+* Suitable for real-time system
+    * avoid malloc
+* Selectable threading model
+    * single thread
+    * thread pool
 
 ## Getting Started
 
-* Building libevdsptc from source
+* Build libpthread from source
+
+    For Linux:
 
     ```shell
     cd build
     cmake ..
     make
+    ```
+    For MinGW on Windows:
+
+    ```shell
+    cd build
+    cmake -G "MinGW Makefiles" ..
+    mingw32-make
     ```
 
 * Compile minimum program
@@ -43,8 +61,41 @@ sync/async event dispatcher for C/C++
     ```
 
 * Link libevdsptc and libpthread
+    
+    * For Windows, install [pthreads-w32](https://sourceforge.net/projects/mingw/files/MinGW/Base/pthreads-w32/)
+
 * Run
 
+## Examples
+
+* async event
+    * See async_event_example, test/src/example.cpp 
+
+* sync event
+    * See sync_event_example, test/src/example.cpp 
+
+* list 
+    * See list_bubble_sort_example, test/src/example.cpp 
+
+* thread pool
+    * See async_event_threadpool_example, test/src/example.cpp 
+
+* and more
+    * See test/src/evdsptc_test.cpp
+
+## Running Tests
+* Building Cpputest
+    ```shell
+    git submodule init
+    git submodule update
+    cd test
+    sh ./build_cpputest.sh
+    ```
+
+* Run
+    ```sh
+    make
+    ```
 ## API Reference
 
 ### evdsptc_create
@@ -63,6 +114,18 @@ evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
     * begin_callback
     * event handler
     * end_callback
+
+### evdsptc_create_threadpool
+```c
+evdsptc_error_t evdsptc_create_threadpool (evdsptc_context_t* context,
+    evdsptc_event_callback_t queued_callback,
+    evdsptc_event_callback_t begin_callback,
+    evdsptc_event_callback_t end_callback
+    int threads_num);
+```
+* creates a event dispatcher. event dispatcher have multiple event dispatcher threads and an event queue.
+    * threads_num is number of worker threads, and its maximum is 256.
+    * The other arguments are similar to evdsptc_create.
 
 ### evdsptc_event_destroy
 ```c
@@ -222,30 +285,3 @@ void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destruct
 void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct);
 ```
 
-## Examples
-
-* async event
-    * See async_event_example, test/src/example.cpp 
-
-* sync event
-    * See sync_event_example, test/src/example.cpp 
-
-* list 
-    * See list_bubble_sort_example, test/src/example.cpp 
-
-* and more
-    * See test/src/evdsptc_test.cpp
-
-## Running Tests
-* Building Cpputest
-    ```shell
-    git submodule init
-    git submodule update
-    cd test
-    sh ./build_cpputest.sh
-    ```
-
-* Run
-    ```sh
-    make
-    ```

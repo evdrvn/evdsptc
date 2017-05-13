@@ -9,6 +9,7 @@
 
 static volatile int sum = 0;
 static volatile int count = 0;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 static bool hello(evdsptc_event_t* event){
     printf("hello %s\n", (char*)evdsptc_event_getparam(event));
@@ -16,7 +17,13 @@ static bool hello(evdsptc_event_t* event){
 }
 
 static bool add_int(evdsptc_event_t* event){
-    sum += (int)evdsptc_event_getparam(event);
+    int a, b;
+    pthread_mutex_lock(&mutex);
+    a = sum;
+    b = (int)evdsptc_event_getparam(event);
+    sum = a + b;
+    EVDSPTC_TRACE("%d + %d -> %d", a, b, sum);
+    pthread_mutex_unlock(&mutex);
     return true; // set true if done
 }
 
@@ -69,6 +76,33 @@ TEST(example_group, async_event_example){
 
     evdsptc_destory(&ctx, true); 
 }
+
+TEST(example_group, async_event_threadpool_example){
+
+    evdsptc_context_t ctx;
+    evdsptc_event_t* ev;
+    int i = 0;
+    int sum_expected = 0;
+
+    evdsptc_create_threadpool(&ctx, NULL, NULL, NULL, 3);
+
+    for(i = 0; i <= 30; i++){
+        ev = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
+        evdsptc_event_init(ev, add_int, (void*)i, true, evdsptc_event_free);
+        evdsptc_post(&ctx, ev);
+        sum_expected += i;
+    }
+
+    //wait to have be handled async event
+    i = 0;
+    while(sum < sum_expected && i++ < USLEEP_PERIOD) {
+        usleep(NUM_OF_USLEEP);
+    }
+    CHECK_EQUAL(sum_expected, sum);
+
+    evdsptc_destory(&ctx, true); 
+}
+
 
 TEST(example_group, sync_event_example){
 

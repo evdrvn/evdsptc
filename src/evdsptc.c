@@ -139,12 +139,22 @@ static void* evdsptc_thread_routine(void* arg){
     return NULL;
 }
 
-evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
+static evdsptc_error_t evdsptc_create_impl (evdsptc_context_t* context,
         evdsptc_event_callback_t queued_callback,
         evdsptc_event_callback_t begin_callback,
-        evdsptc_event_callback_t end_callback)
+        evdsptc_event_callback_t end_callback,
+        int threads_num
+        )
 {
     evdsptc_error_t ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;
+    int i;
+
+    if(threads_num < 1 || EVDSPTC_MAX_THREADS < threads_num){
+        ret = EVDSPTC_ERROR_INVALID;
+        goto ERROR;
+    }else{
+        context->threads_num = threads_num;
+    }
     
     pthread_mutex_init(&context->mtx, NULL);
     pthread_cond_init(&context->cv, NULL);
@@ -157,9 +167,11 @@ evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
     context->begin_callback = begin_callback;
     context->end_callback = end_callback; 
 
-    if(0 != pthread_create(&context->th, NULL, &evdsptc_thread_routine, (void*) context)){
-        ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;
-        goto ERROR;
+    for(i = 0; i < context->threads_num; i++){
+        if(0 != pthread_create(&context->th[i], NULL, &evdsptc_thread_routine, (void*) context)){
+            ret = EVDSPTC_ERROR_FAIL_CREATE_THREAD;
+            goto ERROR;
+        }
     }
 
     ret = EVDSPTC_ERROR_NONE;
@@ -172,20 +184,40 @@ DONE:
     return ret;
 }
 
+evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
+        evdsptc_event_callback_t queued_callback,
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback)
+{
+    return evdsptc_create_impl(context, queued_callback, begin_callback, end_callback, 1);
+} 
+
+evdsptc_error_t evdsptc_create_threadpool (evdsptc_context_t* context,
+        evdsptc_event_callback_t queued_callback,
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback,
+        int threads_num)
+{
+    return evdsptc_create_impl(context, queued_callback, begin_callback, end_callback, threads_num);
+} 
+
 evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join){
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
     void* arg = NULL;
-    
+    int i;
+
     pthread_mutex_lock(&context->mtx);
     if(context->state == EVDSPTC_STATUS_RUNNING){
         context->state = EVDSPTC_STATUS_DESTROYING;
-        pthread_cond_signal(&context->cv);
+        pthread_cond_broadcast(&context->cv);
     }
     pthread_mutex_unlock(&context->mtx);
-    
-    if(join) pthread_join(context->th, &arg);
-    else pthread_detach(context->th);  
- 
+
+    for(i = 0; i < context->threads_num; i++){
+        if(join) pthread_join(context->th[i], &arg);
+        else pthread_detach(context->th[i]);  
+    }
+
     evdsptc_list_destroy(&context->list);
    
     return ret;
@@ -209,7 +241,7 @@ evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event
 
     pthread_mutex_lock(&context->mtx);
     if(context->state == EVDSPTC_STATUS_RUNNING){
-        pthread_cond_signal(&context->cv);
+        pthread_cond_broadcast(&context->cv);
         event->context = context;
         evdsptc_list_push(&context->list, &event->listelem);
         if(context->queued_callback != NULL) context->queued_callback(event);
@@ -276,7 +308,7 @@ void evdsptc_event_free (evdsptc_event_t* event){
     free(event);
 }
 
-pthread_t evdsptc_getthread(evdsptc_context_t* context){
+pthread_t* evdsptc_getthreads(evdsptc_context_t* context){
     return context->th;
 }
 
@@ -294,7 +326,6 @@ bool evdsptc_event_isdone (evdsptc_event_t* event){
     __sync_synchronize();
     return event->is_done;
 }
-
 
 void evdsptc_event_destroy (evdsptc_event_t* event){
     if(event->destructor != NULL) event->destructor(event);

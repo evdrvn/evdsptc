@@ -13,6 +13,14 @@ extern "C" {
 #include <errno.h>
 #include <stdio.h>
 
+#define EVDSPTC_MAX_THREADS (256)
+
+#ifdef EVDSPTRACE
+#define EVDSPTC_TRACE(fmt, ...) printf("##TRACE## %p: " fmt "\n", (void*)pthread_self(), ##__VA_ARGS__); fflush(stdout)
+#else
+#define EVDSPTC_TRACE(fmt, ...) (void)sizeof(printf(fmt,##__VA_ARGS__))
+#endif
+
 typedef enum{
     EVDSPTC_ERROR_NONE = 0,
     EVDSPTC_ERROR_FAIL_CREATE_THREAD,
@@ -63,7 +71,8 @@ struct evdsptc_event {
 
 struct evdsptc_context {
     evdsptc_list_t list;
-    pthread_t th;
+    int threads_num;
+    pthread_t th[EVDSPTC_MAX_THREADS];
     pthread_mutex_t mtx;
     pthread_cond_t cv;
     evdsptc_status_t state;
@@ -89,6 +98,12 @@ extern evdsptc_error_t evdsptc_create (evdsptc_context_t* context,
         evdsptc_event_callback_t begin_callback,
         evdsptc_event_callback_t end_callback
         );
+extern evdsptc_error_t evdsptc_create_threadpool (evdsptc_context_t* context,
+        evdsptc_event_callback_t queued_callback,
+        evdsptc_event_callback_t begin_callback,
+        evdsptc_event_callback_t end_callback,
+        int threads_num
+        );
 extern evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
 extern evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
@@ -100,7 +115,7 @@ extern evdsptc_error_t evdsptc_event_init (evdsptc_event_t* event,
         evdsptc_event_destructor_t event_destructor);
 extern void* evdsptc_event_getparam(evdsptc_event_t* event);
 extern void evdsptc_event_free (evdsptc_event_t* event);
-extern pthread_t evdsptc_getthread(evdsptc_context_t* context);
+extern pthread_t* evdsptc_getthreads(evdsptc_context_t* context);
 extern pthread_mutex_t* evdsptc_getmutex(evdsptc_context_t* context);
 extern void evdsptc_event_done (evdsptc_event_t* event);
 extern bool evdsptc_event_isdone (evdsptc_event_t* event);

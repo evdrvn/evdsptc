@@ -7,8 +7,8 @@
 #define USLEEP_PERIOD (10000)
 #define NUM_OF_USLEEP (10)
 
-static volatile int sum = 0;
-static volatile int count = 0;
+static volatile long sum = 0;
+static volatile long count = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 static bool hello(evdsptc_event_t* event){
@@ -17,12 +17,12 @@ static bool hello(evdsptc_event_t* event){
 }
 
 static bool add_int(evdsptc_event_t* event){
-    int a, b;
+    long a, b;
     pthread_mutex_lock(&mutex);
     a = sum;
-    b = (int)evdsptc_event_getparam(event);
+    b = (long)evdsptc_event_getparam(event);
     sum = a + b;
-    EVDSPTC_TRACE("%d + %d -> %d", a, b, sum);
+    EVDSPTC_TRACE("%ld + %ld -> %ld", a, b, sum);
     pthread_mutex_unlock(&mutex);
     return true; // set true if done
 }
@@ -57,8 +57,8 @@ TEST(example_group, async_event_example){
 
     evdsptc_context_t ctx;
     evdsptc_event_t* ev;
-    int i = 0;
-    int sum_expected = 0;
+    long i = 0;
+    long sum_expected = 0;
 
     evdsptc_create(&ctx, NULL, NULL, NULL);
 
@@ -81,8 +81,8 @@ TEST(example_group, async_event_threadpool_example){
 
     evdsptc_context_t ctx;
     evdsptc_event_t* ev;
-    int i = 0;
-    int sum_expected = 0;
+    long i = 0;
+    long sum_expected = 0;
 
     evdsptc_create_threadpool(&ctx, NULL, NULL, NULL, 3);
 
@@ -108,8 +108,8 @@ TEST(example_group, sync_event_example){
 
     evdsptc_context_t ctx;
     evdsptc_event_t ev[11];
-    int i = 0;
-    int sum_expected = 0;
+    long i = 0;
+    long sum_expected = 0;
 
     evdsptc_create(&ctx, NULL, NULL, NULL);
 
@@ -125,7 +125,7 @@ TEST(example_group, sync_event_example){
 }
 
 static bool add_int_and_suspend(evdsptc_event_t* event){
-    sum += (int)evdsptc_event_getparam(event);
+    sum += (long)evdsptc_event_getparam(event);
     return false; // set false if suspend 
 }
 

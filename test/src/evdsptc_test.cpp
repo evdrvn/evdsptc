@@ -6,14 +6,16 @@
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 
-#define USLEEP_PERIOD (10000)
+#define USLEEP_TIMES (5 * 1000 * 5)
 #define NUM_OF_USLEEP (10)
+#define TIMER_INTERVAL_NS (50 * 1000)
 
 static volatile int sem_event_queued_count = 0;
 static volatile int sem_event_begin_count = 0;
 static volatile int sem_event_handled_count = 0;
 static volatile int sem_event_end_count = 0;
 static volatile int blocking = 0;
+static volatile int inc_event_count = 0;
 
 TEST_GROUP(evdsptc_test_group){
     void setup(){
@@ -22,6 +24,7 @@ TEST_GROUP(evdsptc_test_group){
         sem_event_handled_count = 0;
         sem_event_end_count = 0;
         blocking = 0;
+        inc_event_count = 0;
     }
     void teardown(){
         mock().checkExpectations();
@@ -45,6 +48,21 @@ static bool handle_sem_event(evdsptc_event_t *event){
     sem_event_handled_count++;
     while (sem_wait(sem) == -1 && errno == EINTR) continue;  
     return true;
+}
+
+static bool handle_inc_event(evdsptc_event_t *event){
+    (void)event;
+    inc_event_count++;
+    return true;
+}
+
+static bool handle_periodic_event(evdsptc_event_t *event){
+    int* count = (int*)evdsptc_event_getparam(event);
+    (*count)--;
+    __sync_synchronize();
+    inc_event_count++;
+    if(0 == *count) return true;
+    return false;
 }
 
 static void sem_event_queued(evdsptc_event_t* event){
@@ -78,6 +96,43 @@ static evdsptc_error_t init_sem_event (evdsptc_event_t** event, evdsptc_handler_
     return ret;
 }
 
+static evdsptc_error_t init_inc_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, bool free){
+    evdsptc_error_t ret;
+    evdsptc_event_destructor_t destructor = NULL;
+    bool auto_destruct = false;
+
+    *event = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
+    if(free){
+        destructor = evdsptc_event_free; 
+        auto_destruct = true;
+    }
+    ret = evdsptc_event_init(*event, event_handler, NULL, auto_destruct, destructor);
+    return ret;
+}
+
+static evdsptc_error_t init_periodic_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, int** count, int left, bool free){
+    evdsptc_error_t ret;
+    evdsptc_event_destructor_t destructor = NULL;
+    bool auto_destruct = false;
+
+    *count = (int*)malloc(sizeof(int));
+    *event = (evdsptc_event_t*)malloc(sizeof(evdsptc_event_t));
+    **count = left;
+    if(free){
+        destructor = evdsptc_event_free; 
+        auto_destruct = true;
+    }
+    ret = evdsptc_event_init(*event, event_handler, (void*)*count, auto_destruct, destructor);
+    return ret;
+}
+
+static evdsptc_error_t init_timed_sem_event (evdsptc_event_t** event, evdsptc_handler_t event_handler, sem_t** sem, bool free, struct timespec* timer, evdsptc_timertype_t type){
+    evdsptc_error_t ret;
+    ret = init_sem_event (event, event_handler, sem, free);
+    evdsptc_event_settimer(*event, timer, type);
+    return ret;
+}
+
 static evdsptc_error_t post (evdsptc_context_t* context, evdsptc_event_t* event, bool block_to_done){
     evdsptc_error_t ret;
     if(block_to_done)blocking++;
@@ -106,7 +161,8 @@ TEST(evdsptc_test_group, post_test){
 
     evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     post(&ctx, event[0], false);
-    while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_handled_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     
     post(&ctx, event[1], false);
     post(&ctx, event[2], false);
@@ -125,16 +181,18 @@ TEST(evdsptc_test_group, post_test){
     
     sem_post(sem[0]);
 
-    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_end_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
 
     sem_post(sem[1]);
     sem_post(sem[2]);
 
-    while(sem_event_end_count < 3 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_end_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
 
     mock().checkExpectations();
-    CHECK(ctx.list.root.prev == NULL);
-    CHECK(ctx.list.root.next == NULL);
+    POINTERS_EQUAL(NULL, ctx.list.root.prev);
+    POINTERS_EQUAL(NULL, ctx.list.root.next);
 
     evdsptc_destory(&ctx, true); 
 
@@ -167,7 +225,8 @@ TEST(evdsptc_test_group, destroy_test){
 
     evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     post(&ctx, event[0], false);
-    while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_handled_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
 
     post(&ctx, event[1], false);
     post(&ctx, event[2], false);
@@ -176,11 +235,12 @@ TEST(evdsptc_test_group, destroy_test){
 
     sem_post(sem[0]);
 
-    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_end_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
 
     mock().checkExpectations();
-    CHECK(ctx.list.root.prev == NULL);
-    CHECK(ctx.list.root.next == NULL);
+    POINTERS_EQUAL(NULL, ctx.list.root.prev);
+    POINTERS_EQUAL(NULL, ctx.list.root.next);
 
     free(sem[0]);
     free(sem[1]);
@@ -236,14 +296,17 @@ TEST(evdsptc_test_group, block_to_done_test){
     ret = evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
     async_post(&th[0], &param[0]);
     
-    while(sem_event_handled_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_handled_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
 
     async_post(&th[1], &param[1]);
-    while(sem_event_queued_count < 2 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_queued_count < 2 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(1, blocking);
     
     async_post(&th[2], &param[2]);
-    while(sem_event_queued_count < 3 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_queued_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(2, blocking);
 
     mock().checkExpectations();
@@ -253,10 +316,12 @@ TEST(evdsptc_test_group, block_to_done_test){
 
     sem_post(sem[0]);
     
-    while(sem_event_end_count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
-    while(sem_event_begin_count < 2 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
-    CHECK_EQUAL(event[2], (evdsptc_event_t*)ctx.list.root.next);
-    CHECK(NULL == ctx.list.root.next->next);
+    i = 0;
+    while(sem_event_end_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_begin_count < 2 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    POINTERS_EQUAL(event[2], (evdsptc_event_t*)ctx.list.root.next);
+    POINTERS_EQUAL(NULL, ctx.list.root.next->next);
     
     ret = evdsptc_destory(&ctx, false); 
     CHECK_EQUAL(false, event[0]->is_canceled);
@@ -268,7 +333,8 @@ TEST(evdsptc_test_group, block_to_done_test){
 
     sem_post(sem[1]);
 
-    while(blocking > 0 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(blocking > 0 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(0, blocking);
     mock().checkExpectations();
     
@@ -279,8 +345,8 @@ TEST(evdsptc_test_group, block_to_done_test){
     pthread_join(th[2], (void**)&ret);
     CHECK_EQUAL(EVDSPTC_ERROR_CANCELED, ret);
     
-    CHECK(ctx.list.root.next == NULL);
-    CHECK(ctx.list.root.prev == NULL);
+    POINTERS_EQUAL(NULL, ctx.list.root.next);
+    POINTERS_EQUAL(NULL, ctx.list.root.prev);
 
     free(evdsptc_event_getparam(event[0]));
     free(evdsptc_event_getparam(event[1]));
@@ -342,6 +408,288 @@ TEST(evdsptc_list_test_group, list_test){
 
     CHECK_EQUAL(3, count_forward(&list));
     CHECK_EQUAL(3, count_reverse(&list));
+}
+
+TEST(evdsptc_test_group, post_timer_test){
+    evdsptc_context_t ctx;
+    sem_t* sem[3];
+    evdsptc_event_t* event[3];
+    int i = 0;
+
+    struct timespec intv = {0, TIMER_INTERVAL_NS};
+    struct timespec timer1, timer2, timer3;
+    struct timespec now;
+
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer1 = evdsptc_timespec_add(&now, &intv);
+    init_timed_sem_event(&event[0], handle_sem_event, &sem[0], false, &timer1, EVDSPTC_TIMERTYPE_ABSOLUTE);
+    init_timed_sem_event(&event[1], handle_sem_event, &sem[1], false, &intv, EVDSPTC_TIMERTYPE_RELATIVE);
+    init_timed_sem_event(&event[2], handle_sem_event, &sem[2], false, &intv, EVDSPTC_TIMERTYPE_RELATIVE);
+   
+    mock().expectOneCall("sem_event_queued").onObject(event[0]);
+    mock().expectOneCall("sem_event_begin").onObject(event[0]);
+    mock().expectOneCall("handle_sem_event").onObject(event[0]);
+    
+    mock().expectOneCall("sem_event_queued").onObject(event[1]);
+    mock().expectOneCall("sem_event_queued").onObject(event[2]);
+    
+    evdsptc_create(&ctx, sem_event_queued, sem_event_begin, sem_event_end);
+    
+    post(&ctx, event[0], false);
+  
+    i = 0;
+    while(sem_event_handled_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    clock_gettime(CLOCK_REALTIME, &now);
+    CHECK(evdsptc_timespec_compare(&timer1, &now) <= 0);
+
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer2 = evdsptc_timespec_add(&now, &intv);
+    post(&ctx, event[1], false);
+
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer3 = evdsptc_timespec_add(&now, &intv);
+    post(&ctx, event[2], false);
+   
+    mock().checkExpectations();
+
+    mock().expectOneCall("sem_event_end").onObject(event[0]);
+
+    mock().expectOneCall("sem_event_begin").onObject(event[1]);
+    mock().expectOneCall("handle_sem_event").onObject(event[1]);
+    mock().expectOneCall("sem_event_end").onObject(event[1]);
+
+    mock().expectOneCall("sem_event_begin").onObject(event[2]);
+    mock().expectOneCall("handle_sem_event").onObject(event[2]);
+    mock().expectOneCall("sem_event_end").onObject(event[2]);
+    
+    sem_post(sem[0]);
+
+    i = 0;
+    while(sem_event_end_count < 1 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    i = 0;
+    while(sem_event_handled_count < 2 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    clock_gettime(CLOCK_REALTIME, &now);
+    CHECK(evdsptc_timespec_compare(&timer2, &now) <= 0);
+    
+    sem_post(sem[1]);
+
+    i = 0;
+    while(sem_event_handled_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    clock_gettime(CLOCK_REALTIME, &now);
+    CHECK(evdsptc_timespec_compare(&timer3, &now) <= 0);
+    
+    sem_post(sem[2]);
+
+    i = 0;
+    while(sem_event_end_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+
+    mock().checkExpectations();
+    POINTERS_EQUAL(NULL, ctx.list.root.prev);
+    POINTERS_EQUAL(NULL, ctx.list.root.next);
+
+    evdsptc_destory(&ctx, true); 
+
+    for(i = 0; i < 3; i++){
+        free(sem[i]);
+        free(event[i]);
+    }
+}
+
+TEST(evdsptc_test_group, post_timer_mixed_test){
+    evdsptc_context_t ctx;
+    sem_t* sem[3];
+    evdsptc_event_t* event[100];
+    int i = 0;
+    int inc_event_posted = 0;
+
+    struct timespec intv = {0, TIMER_INTERVAL_NS};
+    struct timespec timer1, timer2, timer3;
+    struct timespec now;
+
+    for(i = 3; i < 100; i++){
+        init_inc_event(&event[i], handle_inc_event, false);
+    }
+
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer1 = evdsptc_timespec_add(&now, &intv);
+
+    init_timed_sem_event(&event[0], handle_sem_event, &sem[0], false, &timer1, EVDSPTC_TIMERTYPE_ABSOLUTE);
+    init_timed_sem_event(&event[1], handle_sem_event, &sem[1], false, &intv, EVDSPTC_TIMERTYPE_RELATIVE);
+    init_timed_sem_event(&event[2], handle_sem_event, &sem[2], false, &intv, EVDSPTC_TIMERTYPE_RELATIVE);
+
+    sem_post(sem[0]);
+    sem_post(sem[1]);
+    sem_post(sem[2]);
+   
+    mock().expectOneCall("handle_sem_event").onObject(event[0]);
+    mock().expectOneCall("handle_sem_event").onObject(event[1]);
+    mock().expectOneCall("handle_sem_event").onObject(event[2]);
+    
+    evdsptc_create(&ctx, NULL, NULL, NULL);
+
+    while(inc_event_posted < 7){
+        post(&ctx, event[3 + inc_event_posted], false);
+        inc_event_posted++;
+    }  
+    post(&ctx, event[0], false);
+    i = 0;
+    while(sem_event_handled_count < 1 && i++ < USLEEP_TIMES) {
+        if(inc_event_posted < 10){
+            post(&ctx, event[3 + inc_event_posted], false);
+            inc_event_posted++;
+        }
+        if(i % 5 == 0) usleep(NUM_OF_USLEEP);
+    }
+    clock_gettime(CLOCK_REALTIME, &now);
+    //printf("\nposted= %03d", inc_event_posted);
+    //printf("\ncount = %03d", inc_event_count);
+    //printf("\nnow   = %010d.%09d", (int)now.tv_sec, (int)now.tv_nsec);
+    //printf("\ntimer1= %010d.%09d", (int)timer1.tv_sec, (int)timer1.tv_nsec);
+    //printf("\nevent1= %010d.%09d\n", (int)event[0]->timer.tv_sec, (int)event[0]->timer.tv_nsec);
+    CHECK(evdsptc_timespec_compare(&timer1, &now) <= 0);
+
+    while(inc_event_posted < 20){
+        post(&ctx, event[3 + inc_event_posted], false);
+        inc_event_posted++;
+    }  
+    
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer2 = evdsptc_timespec_add(&now, &intv);
+    post(&ctx, event[1], false);
+    
+    usleep(NUM_OF_USLEEP);
+    
+    clock_gettime(CLOCK_REALTIME, &now); 
+    timer3 = evdsptc_timespec_add(&now, &intv);
+    post(&ctx, event[2], false);
+
+    while(inc_event_posted < 50){
+        post(&ctx, event[3 + inc_event_posted], false);
+        inc_event_posted++;
+    }
+
+    i = 0;
+    while(sem_event_handled_count < 2 && i++ < USLEEP_TIMES) {
+        if(inc_event_posted < 80){
+            post(&ctx, event[3 + inc_event_posted], false);
+            inc_event_posted++;
+        }
+        if(i % 5 == 0) usleep(NUM_OF_USLEEP);
+    }
+    clock_gettime(CLOCK_REALTIME, &now);
+    //printf("\nposted= %03d", inc_event_posted);
+    //printf("\ncount = %03d", inc_event_count);
+    //printf("\ntimer2= %010d.%09d", (int)timer2.tv_sec, (int)timer2.tv_nsec);
+    //printf("\nevent2= %010d.%09d\n", (int)event[1]->timer.tv_sec, (int)event[1]->timer.tv_nsec);
+    CHECK(evdsptc_timespec_compare(&timer2, &now) <= 0);
+
+    i = 0;
+    while(sem_event_handled_count < 3 && i++ < USLEEP_TIMES) {
+        if(inc_event_posted < 90){
+            post(&ctx, event[3 + inc_event_posted], false);
+            inc_event_posted++;
+        }
+        if(i % 5 == 0) usleep(NUM_OF_USLEEP);
+    }
+    clock_gettime(CLOCK_REALTIME, &now);
+    //printf("\nposted= %03d", inc_event_posted);
+    //printf("\ncount = %03d", inc_event_count);
+    //printf("\nnow   = %010d.%09d", (int)now.tv_sec, (int)now.tv_nsec);
+    //printf("\ntimer3= %010d.%09d", (int)timer3.tv_sec, (int)timer3.tv_nsec);
+    //printf("\nevent3= %010d.%09d\n", (int)event[2]->timer.tv_sec, (int)event[2]->timer.tv_nsec);
+    CHECK(evdsptc_timespec_compare(&timer3, &now) <= 0);
+
+    mock().checkExpectations();
+    
+    while(inc_event_posted < 97){
+        post(&ctx, event[3 + inc_event_posted], false);
+        inc_event_posted++;
+    }
+
+    i = 0;
+    while(inc_event_count < inc_event_posted && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+
+    POINTERS_EQUAL(NULL, ctx.list.root.prev);
+    POINTERS_EQUAL(NULL, ctx.list.root.next);
+
+    evdsptc_destory(&ctx, true); 
+
+    for(i = 0; i < 100; i++){
+        if(i < 3) free(sem[i]);
+        free(event[i]);
+    }
+}
+
+TEST(evdsptc_test_group, periodic_test){
+    evdsptc_context_t ctx;
+    int* count[3];
+    evdsptc_event_t* event[3];
+    struct timespec intv = {0, 1000 * 1000};
+    int i = 0;
+    struct timespec target, now;
+    
+    init_periodic_event(&event[0], handle_periodic_event, &count[0], 10, false);
+    init_periodic_event(&event[1], handle_periodic_event, &count[1], 20, false);
+    init_periodic_event(&event[2], handle_periodic_event, &count[2], 30, false);
+
+    evdsptc_create_periodic(&ctx, NULL, NULL, NULL, &intv);
+    clock_gettime(CLOCK_MONOTONIC, &target);
+    post(&ctx, event[0], false);
+    post(&ctx, event[1], false);
+    post(&ctx, event[2], false);
+
+    for(i = 0; i < 10; i++){
+        int j = 0;
+        while(*(count[0]) > (10 - 1 - i) && j++ < (USLEEP_TIMES / 5)) usleep(NUM_OF_USLEEP);
+        target = evdsptc_timespec_add(&target, &intv);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        CHECK(evdsptc_timespec_compare(&target, &now) <= 0);
+    }
+
+    i = 0;
+    while(inc_event_count < 60 && i++ < (USLEEP_TIMES / 5)) usleep(NUM_OF_USLEEP);
+    CHECK_EQUAL(60, inc_event_count);
+
+    evdsptc_destory(&ctx, true); 
+
+    for(i = 0; i < 3; i++){
+        free(count[i]);
+        free(event[i]);
+    }
+}
+
+TEST(evdsptc_test_group, periodic_destroy_test){
+    evdsptc_context_t ctx;
+    int* count[3];
+    evdsptc_event_t* event[3];
+    struct timespec intv = {0, 1000 * 1000};
+    int i = 0;
+    struct timespec target, now;
+    
+    init_periodic_event(&event[0], handle_periodic_event, &count[0], 10, false);
+    init_periodic_event(&event[1], handle_periodic_event, &count[1], 20, false);
+    init_periodic_event(&event[2], handle_periodic_event, &count[2], 30, false);
+
+    evdsptc_create_periodic(&ctx, NULL, NULL, NULL, &intv);
+    clock_gettime(CLOCK_MONOTONIC, &target);
+    post(&ctx, event[0], false);
+    post(&ctx, event[1], false);
+    post(&ctx, event[2], false);
+
+    for(i = 0; i < 10; i++){
+        int j = 0;
+        while(*(count[0]) > (10 - 1 - i) && j++ < (USLEEP_TIMES / 5)) usleep(NUM_OF_USLEEP);
+        target = evdsptc_timespec_add(&target, &intv);
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        CHECK(evdsptc_timespec_compare(&target, &now) <= 0);
+    }
+
+    evdsptc_destory(&ctx, true); 
+
+    for(i = 0; i < 3; i++){
+        free(count[i]);
+        free(event[i]);
+    }
 }
 
 int main(int ac, char** av){

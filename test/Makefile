@@ -20,6 +20,10 @@ INCLUDE_DIRS =\
   ../src\
   $(CPPUTEST_HOME)/include\
 
-CPPUTEST_LDFLAGS += -lpthread
+CPPUTEST_CPPFLAGS+= -DEVDSPTRACE
+CPPUTEST_CXXFLAGS+= -std=gnu++0x
+CPPUTEST_CFLAGS  += -std=gnu99
+CPPUTEST_LDFLAGS += -lpthread -lrt
+CPPUTEST_PEDANTIC_ERRORS = N
 
 include $(CPPUTEST_HOME)/build/MakefileWorker.mk

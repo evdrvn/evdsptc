@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
-SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build Type")
+set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build Type")
 add_definitions("-Wall")
-add_library(evdsptc STATIC
-    src/evdsptc.c
-)
+add_library(evdsptc-static STATIC src/evdsptc.c)
+add_library(evdsptc-shared SHARED src/evdsptc.c)
+set_target_properties(evdsptc-static PROPERTIES OUTPUT_NAME "evdsptc")
+set_target_properties(evdsptc-shared PROPERTIES OUTPUT_NAME "evdsptc")
+set_target_properties(evdsptc-shared PROPERTIES IMPORT_SUFFIX "_import.lib")

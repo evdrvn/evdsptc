@@ -188,7 +188,7 @@ TEST(example_group, async_event_done_example){
     while(count < 1 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(1, count);
 
-    evdsptc_event_done(suspended.ev);
+    evdsptc_event_makedone(suspended.ev);
 
     //check done count
     i = 0;
@@ -256,4 +256,102 @@ TEST(example_group, list_bubble_sort_example){
     }
 
     evdsptc_list_destroy(&list);
+}
+
+#define INTERVAL_NS (1000 * 1000LL)
+#define NS_AS_SEC (1000 * 1000 * 1000LL)
+#define MAX_TIMES (5000)
+struct handle_timer_context {
+    long long int interval[MAX_TIMES];
+    struct timespec prev;
+    int count;
+};
+static long long int timespec_diff(struct timespec *t1, struct timespec *t2){
+    return  t2->tv_nsec - t1->tv_nsec + (t2->tv_sec - t1->tv_sec) * NS_AS_SEC;
+}
+static bool handle_timer(evdsptc_event_t* event){
+    struct timespec now;
+    struct handle_timer_context* htcxt = (struct handle_timer_context*)evdsptc_event_getparam(event);
+    clock_gettime(CLOCK_REALTIME, &now);
+    if(htcxt->count >= 0) htcxt->interval[htcxt->count] = timespec_diff(&htcxt->prev, &now);
+    htcxt->prev = now;
+    if(++htcxt->count >= MAX_TIMES) return true;
+    return false;
+}
+
+TEST(example_group, periodic_example){
+    struct handle_timer_context htcxt;
+    long long int max = INTERVAL_NS;
+    long long int min = INTERVAL_NS;
+    struct timespec interval = { interval.tv_sec = 0, interval.tv_nsec = INTERVAL_NS};
+    pthread_t th;
+    pthread_mutexattr_t mutexattr;
+    struct sched_param param;
+    evdsptc_context_t ctx;
+    evdsptc_event_t ev;
+    int i = 0;
+
+    htcxt.count = -1;
+
+    CHECK_EQUAL(0, pthread_mutexattr_init(&mutexattr));
+    CHECK_EQUAL(0, pthread_mutexattr_setprotocol(&mutexattr, PTHREAD_PRIO_INHERIT));
+    evdsptc_setmutexattrinitializer(&mutexattr);
+    CHECK_EQUAL(EVDSPTC_ERROR_NONE, evdsptc_create_periodic(&ctx, NULL, NULL, NULL, &interval));
+
+    th = evdsptc_getthreads(&ctx)[0];
+    param.sched_priority = 98;
+    if(0 != pthread_setschedparam(th, SCHED_RR, &param)){
+        printf("\nwarning : you get better performance to run this test 'periodic_example' as root via RT-Preempt.\n");
+    }
+
+    evdsptc_event_init(&ev, handle_timer, (void*)&htcxt, false, NULL);
+    evdsptc_post(&ctx, &ev);
+    evdsptc_event_waitdone(&ev);
+
+    evdsptc_destory(&ctx, true);
+
+    for(i = 0; i < MAX_TIMES; i++){
+        if(htcxt.interval[i] < min) min = htcxt.interval[i];
+        if(htcxt.interval[i] > max) max = htcxt.interval[i];
+    }
+
+    printf("\n min = %lld, max = %lld\n", min, max);
+}
+
+static bool clock(evdsptc_event_t* event){
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    printf("\nclock event %p handled at %d.%09d", (void*)event, (int)now.tv_sec, (int)now.tv_nsec);
+    return true;
+}
+
+TEST(example_group, timer_example){
+    evdsptc_context_t ctx;
+    evdsptc_event_t ev[3];
+    struct timespec timer;
+    struct timespec interval = { 0, 100 * 1000 * 1000};
+
+    evdsptc_create(&ctx, NULL, NULL, NULL);
+
+    evdsptc_event_init(&ev[0], clock, NULL, false, NULL);
+    evdsptc_event_settimer(&ev[0], &interval, EVDSPTC_TIMERTYPE_RELATIVE); 
+    evdsptc_post(&ctx, &ev[0]);
+
+    evdsptc_event_init(&ev[1], clock, NULL, false, NULL);
+    clock_gettime(CLOCK_REALTIME, &timer);
+    timer = evdsptc_timespec_add(&timer, &interval);
+    timer = evdsptc_timespec_add(&timer, &interval);
+    timer = evdsptc_timespec_add(&timer, &interval);
+    evdsptc_event_settimer(&ev[1], &timer, EVDSPTC_TIMERTYPE_ABSOLUTE); 
+    evdsptc_post(&ctx, &ev[1]);
+
+    evdsptc_event_waitdone(&ev[0]);
+    evdsptc_event_init(&ev[2], clock, NULL, false, NULL);
+    evdsptc_event_settimer(&ev[2], &interval, EVDSPTC_TIMERTYPE_RELATIVE); 
+    evdsptc_post(&ctx, &ev[2]);
+
+    evdsptc_event_waitdone(&ev[2]);
+    evdsptc_event_waitdone(&ev[1]);
+
+    evdsptc_destory(&ctx, true);
 }

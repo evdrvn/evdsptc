@@ -322,7 +322,11 @@ TEST(evdsptc_test_group, block_to_done_test){
     while(sem_event_begin_count < 2 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     POINTERS_EQUAL(event[2], (evdsptc_event_t*)ctx.list.root.next);
     POINTERS_EQUAL(NULL, ctx.list.root.next->next);
-    
+   
+    i = 0;
+    while(sem_event_queued_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
+    CHECK_EQUAL(2, blocking);
+ 
     ret = evdsptc_destory(&ctx, false); 
     CHECK_EQUAL(false, event[0]->is_canceled);
     CHECK_EQUAL(false, event[1]->is_canceled);

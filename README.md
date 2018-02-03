@@ -108,37 +108,8 @@ evdsptc is an event dispatching framework. Its main features and design principl
     ```sh
     make
     ```
-
-## Examples
-
-* async event
-    * See async_event_example, test/src/example.cpp 
-
-* sync event
-    * See sync_event_example, test/src/example.cpp 
-
-* list 
-    * See list_bubble_sort_example, test/src/example.cpp 
-
-* thread pool
-    * See async_event_threadpool_example, test/src/example.cpp 
-
-* and more
-    * See test/src/evdsptc_test.cpp
-
-## Running Tests
-* Building Cpputest
-    ```shell
-    git submodule init
-    git submodule update
-    cd test
-    sh ./build_cpputest.sh
     ```
 
-* Run
-    ```sh
-    make
-    ```
 ## API Reference
 
 ### evdsptc_create
@@ -276,20 +247,32 @@ cancel the event.
 ```c
 void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destructor_t destructor);
 ```
-set destructor to the event.
+sets destructor to the event.
 
 ### evdsptc_event_setautodestruct
 ```c
 void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct);
 ```
-set auto destruction to the event.
+sets auto destruction to the event.
 
 ### evdsptc_event_settimer
 ```c
 void evdsptc_event_settimer (evdsptc_event_t* event, struct timespec* timer, evdsptc_timertype_t type);
 ```
-set timer  to the event.
+sets timer  to the event.
 * type is selectable from EVDSPTC_TIMERTYPE_ABSOLUTE or EVDSPTC_TIMERTYPE_RELATIVE.  
+
+### evdsptc_getperiodcount
+```c
+unsigned long long int evdsptc_getperiodcount(evdsptc_context_t* context);
+```
+gets period count.
+
+### evdsptc_isperiodoverrun
+```c
+extern bool evdsptc_isperiodoverrun(evdsptc_context_t* context);
+```
+returns true when the previous period is longer then the periodic interval.
 
 ## Utility Reference
 

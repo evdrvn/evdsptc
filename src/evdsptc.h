@@ -97,6 +97,7 @@ struct evdsptc_context {
     evdsptc_event_callback_t end_callback;
     struct timespec interval;
     unsigned long long int period_count; 
+    bool period_overrun;
 };
 
 extern int evdsptc_timespec_compare (struct timespec* a, struct timespec* b);
@@ -151,6 +152,8 @@ extern void evdsptc_event_cancel (evdsptc_event_t* event);
 extern void evdsptc_event_setdestructor (evdsptc_event_t* event, evdsptc_event_destructor_t destructor);
 extern void evdsptc_event_setautodestruct (evdsptc_event_t* event, bool auto_destruct);
 extern void evdsptc_event_settimer (evdsptc_event_t* event, struct timespec* timer, evdsptc_timertype_t type);
+extern unsigned long long int evdsptc_getperiodcount(evdsptc_context_t* context);
+extern bool evdsptc_isperiodoverrun(evdsptc_context_t* context);
 
 #ifdef __cplusplus
 }

@@ -194,7 +194,7 @@ TEST(evdsptc_test_group, post_test){
     POINTERS_EQUAL(NULL, ctx.list.root.prev);
     POINTERS_EQUAL(NULL, ctx.list.root.next);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 
     free(sem[0]);
     free(sem[1]);
@@ -231,7 +231,7 @@ TEST(evdsptc_test_group, destroy_test){
     post(&ctx, event[1], false);
     post(&ctx, event[2], false);
 
-    evdsptc_destory(&ctx, false);
+    evdsptc_destroy(&ctx, false);
 
     sem_post(sem[0]);
 
@@ -327,7 +327,7 @@ TEST(evdsptc_test_group, block_to_done_test){
     while(sem_event_queued_count < 3 && i++ < USLEEP_TIMES) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(2, blocking);
  
-    ret = evdsptc_destory(&ctx, false); 
+    ret = evdsptc_destroy(&ctx, false); 
     CHECK_EQUAL(false, event[0]->is_canceled);
     CHECK_EQUAL(false, event[1]->is_canceled);
     CHECK_EQUAL(true , event[2]->is_canceled);
@@ -491,7 +491,7 @@ TEST(evdsptc_test_group, post_timer_test){
     POINTERS_EQUAL(NULL, ctx.list.root.prev);
     POINTERS_EQUAL(NULL, ctx.list.root.next);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 
     for(i = 0; i < 3; i++){
         free(sem[i]);
@@ -616,7 +616,7 @@ TEST(evdsptc_test_group, post_timer_mixed_test){
     POINTERS_EQUAL(NULL, ctx.list.root.prev);
     POINTERS_EQUAL(NULL, ctx.list.root.next);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 
     for(i = 0; i < 100; i++){
         if(i < 3) free(sem[i]);
@@ -654,7 +654,7 @@ TEST(evdsptc_test_group, periodic_test){
     while(inc_event_count < 60 && i++ < (USLEEP_TIMES / 5)) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(60, inc_event_count);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 
     for(i = 0; i < 3; i++){
         free(count[i]);
@@ -688,7 +688,7 @@ TEST(evdsptc_test_group, periodic_destroy_test){
         CHECK(evdsptc_timespec_compare(&target, &now) <= 0);
     }
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 
     for(i = 0; i < 3; i++){
         free(count[i]);

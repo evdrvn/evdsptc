@@ -50,7 +50,7 @@ TEST(example_group, hello_world_example){
     evdsptc_post(&ctx, &ev);
     evdsptc_event_waitdone(&ev);
 
-    evdsptc_destory(&ctx, true);
+    evdsptc_destroy(&ctx, true);
 }
 
 TEST(example_group, async_event_example){
@@ -74,7 +74,7 @@ TEST(example_group, async_event_example){
     while(sum < sum_expected && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(sum_expected, sum);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 }
 
 TEST(example_group, async_event_threadpool_example){
@@ -100,7 +100,7 @@ TEST(example_group, async_event_threadpool_example){
     }
     CHECK_EQUAL(sum_expected, sum);
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 }
 
 
@@ -121,7 +121,7 @@ TEST(example_group, sync_event_example){
         CHECK_EQUAL(sum_expected, sum);
     }
 
-    evdsptc_destory(&ctx, true); 
+    evdsptc_destroy(&ctx, true); 
 }
 
 static bool add_int_and_suspend(evdsptc_event_t* event){
@@ -195,8 +195,8 @@ TEST(example_group, async_event_done_example){
     while(count < 2 && i++ < USLEEP_PERIOD) usleep(NUM_OF_USLEEP);
     CHECK_EQUAL(2, count);
 
-    evdsptc_destory(&ctx_recv, true); 
-    evdsptc_destory(&ctx_send, true); 
+    evdsptc_destroy(&ctx_recv, true); 
+    evdsptc_destroy(&ctx_send, true); 
     
     evdsptc_event_destroy(suspended.ev); 
 }
@@ -308,7 +308,7 @@ TEST(example_group, periodic_example){
     evdsptc_post(&ctx, &ev);
     evdsptc_event_waitdone(&ev);
 
-    evdsptc_destory(&ctx, true);
+    evdsptc_destroy(&ctx, true);
 
     for(i = 0; i < MAX_TIMES; i++){
         if(htcxt.interval[i] < min) min = htcxt.interval[i];
@@ -353,5 +353,5 @@ TEST(example_group, timer_example){
     evdsptc_event_waitdone(&ev[2]);
     evdsptc_event_waitdone(&ev[1]);
 
-    evdsptc_destory(&ctx, true);
+    evdsptc_destroy(&ctx, true);
 }

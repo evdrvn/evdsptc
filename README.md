@@ -58,7 +58,7 @@ evdsptc is an event dispatching framework. Its main features and design principl
         evdsptc_post(&ctx, &ev);
         evdsptc_event_waitdone(&ev);
     
-        evdsptc_destory(&ctx, true);
+        evdsptc_destroy(&ctx, true);
     
         return 0;
     }
@@ -108,7 +108,6 @@ evdsptc is an event dispatching framework. Its main features and design principl
     ```sh
     make
     ```
-    ```
 
 ## API Reference
 
@@ -153,9 +152,15 @@ creates a event dispatcher. event dispatcher has a periodic event dispatcher thr
 * interval is the intervel of periodic dispaching. events are removed from the queue when it done (when the event handler returns true). In other words, events that its handler returns false continue to be dispatched. 
 * evdsptc_event_settimer() is not supported. 
 
-### evdsptc_event_destroy
+### evdsptc_cancel
 ```c
-evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
+evdsptc_error_t evdsptc_cancel (evdsptc_context_t* context);
+```
+stops the event dispater. events in the queue are canceled. 
+
+### evdsptc_destroy
+```c
+evdsptc_error_t evdsptc_destroy (evdsptc_context_t* context, bool join);
 ```
 destroys the event dispater. events in the queue are canceled. 
 

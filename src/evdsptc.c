@@ -131,6 +131,7 @@ static void* evdsptc_thread_routine(void* arg){
     int ret = 0;
 
     while(1){
+        event = NULL;
         pthread_mutex_lock(&context->mtx);
         while(context->state == EVDSPTC_STATUS_RUNNING){
             if(context->type == EVDSPTC_TYPE_PERIODIC){
@@ -190,9 +191,14 @@ static void* evdsptc_thread_routine(void* arg){
         if(context->state != EVDSPTC_STATUS_RUNNING) finalize = true;
         pthread_mutex_unlock(&context->mtx);
         
-        if(finalize == true) break;
+        if(finalize == true){
+            EVDSPTC_TRACE("canceling event %p for finalizing ...", event); 
+            break;
+        }
         else if(NULL == event) continue;
         
+        EVDSPTC_TRACE("handling event %p ...", event); 
+
         if(context->begin_callback != NULL) context->begin_callback(event);
         if(event->handler != NULL) event->is_done = event->handler(event);
         else event->is_done = true;
@@ -282,7 +288,31 @@ evdsptc_error_t evdsptc_create_periodic (evdsptc_context_t* context,
     return evdsptc_create_impl(context, queued_callback, begin_callback, end_callback, 1, EVDSPTC_TYPE_PERIODIC);
 } 
 
-evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join){
+evdsptc_error_t evdsptc_cancel (evdsptc_context_t* context){
+    evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
+    evdsptc_listelem_t* i;
+    evdsptc_event_t* e;
+    
+    pthread_mutex_lock(&context->mtx);
+    if(context->state == EVDSPTC_STATUS_RUNNING){
+        context->state = EVDSPTC_STATUS_DESTROYING;
+        pthread_cond_broadcast(&context->cv);
+    }
+    
+    i = evdsptc_list_iterator(&context->list);
+
+    while(evdsptc_listelem_hasnext(i)){
+        i = evdsptc_listelem_next(i);
+        e = (evdsptc_event_t*)i;
+        e->auto_destruct = false;
+        evdsptc_event_cancel(e);
+    }
+    pthread_mutex_unlock(&context->mtx);
+   
+    return ret;
+}
+
+evdsptc_error_t evdsptc_destroy (evdsptc_context_t* context, bool join){
     evdsptc_error_t ret = EVDSPTC_ERROR_NONE;
     void* arg = NULL;
     int i;
@@ -309,7 +339,12 @@ void evdsptc_event_cancel (evdsptc_event_t* event){
     event->is_canceled = true;
     __sync_synchronize();
     sem_post(&event->sem);
-    if(event->auto_destruct && event->destructor != NULL) event->destructor(event);
+    EVDSPTC_TRACE("canceling event %p ...", event); 
+    if(event->auto_destruct && event->destructor != NULL){
+        event->destructor(event);
+    }else{
+        event->auto_destruct = true;
+    }
 }
 
 static void evdsptc_listelem_cancel (evdsptc_listelem_t* listelem){

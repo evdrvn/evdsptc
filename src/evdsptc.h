@@ -15,8 +15,9 @@ extern "C" {
 
 #define EVDSPTC_MAX_THREADS (256)
 
+//#define EVDSPTRACE
 #ifdef EVDSPTRACE
-#define EVDSPTC_TRACE(fmt, ...) printf("##TRACE## %p: " fmt "\n", (void*)pthread_self(), ##__VA_ARGS__); fflush(stdout)
+#define EVDSPTC_TRACE(fmt, ...) printf("##TRACE## %p:%s(): " fmt "\n", (void*)pthread_self(), __func__, ##__VA_ARGS__); fflush(stdout)/* parasoft suppress all */
 #else
 #define EVDSPTC_TRACE(fmt, ...) (void)sizeof(printf(fmt,##__VA_ARGS__))
 #endif
@@ -131,7 +132,8 @@ extern evdsptc_error_t evdsptc_create_periodic (evdsptc_context_t* context,
         evdsptc_event_callback_t end_callback,
         struct timespec* interval
         );
-extern evdsptc_error_t evdsptc_destory (evdsptc_context_t* context, bool join);
+extern evdsptc_error_t evdsptc_cancel (evdsptc_context_t* context);
+extern evdsptc_error_t evdsptc_destroy (evdsptc_context_t* context, bool join);
 extern evdsptc_error_t evdsptc_post (evdsptc_context_t* context, evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_waitdone (evdsptc_event_t* event);
 extern evdsptc_error_t evdsptc_event_trywaitdone (evdsptc_event_t* event);

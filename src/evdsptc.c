@@ -116,7 +116,7 @@ void evdsptc_list_destroy(evdsptc_list_t* list){
 int evdsptc_timespec_compare (struct timespec* l, struct timespec* r){
     if(l->tv_sec < r->tv_sec) return -1;
     if(l->tv_sec > r->tv_sec) return 1;
-    return (l->tv_nsec - r->tv_nsec);
+    return (int)(l->tv_nsec - r->tv_nsec);
 }
 
 static void* evdsptc_thread_routine(void* arg){
